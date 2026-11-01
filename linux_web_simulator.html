@@ -1,0 +1,2784 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>محاكي لينوكس التعليمي التفاعلي | Linux Web Simulator</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            ubuntu: {
+              aubergine: '#2c001e',
+              purple: '#77216f',
+              orange: '#e95420',
+              dark: '#110c11',
+              card: '#1e1622',
+              border: '#43284c'
+            },
+            term: {
+              bg: '#18141f',
+              green: '#22c55e',
+              yellow: '#eab308',
+              blue: '#38bdf8',
+              magenta: '#f472b6',
+              cyan: '#2dd4bf',
+              red: '#f87171',
+              text: '#e2e8f0',
+              dim: '#94a3b8'
+            }
+          },
+          fontFamily: {
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'Consolas', 'Monaco', 'monospace'],
+            sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    body {
+      font-family: 'Cairo', system-ui, sans-serif;
+    }
+    .terminal-font {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-feature-settings: "liga" 0;
+    }
+
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    /* Blinking cursor */
+    @keyframes cursor-blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    .term-cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1.15em;
+      vertical-align: text-bottom;
+      background-color: #38bdf8;
+      animation: cursor-blink 1s infinite;
+    }
+
+    /* Themes */
+    .theme-ubuntu {
+      --bg-terminal: #18141f;
+      --bg-header: #2c001e;
+      --accent: #e95420;
+    }
+    .theme-matrix {
+      --bg-terminal: #050d06;
+      --bg-header: #021a07;
+      --accent: #22c55e;
+    }
+    .theme-cyberpunk {
+      --bg-terminal: #0f111a;
+      --bg-header: #1a102f;
+      --accent: #06b6d4;
+    }
+    .theme-monokai {
+      --bg-terminal: #272822;
+      --bg-header: #1e1f1c;
+      --accent: #a6e22e;
+    }
+
+    /* Text selection */
+    ::selection {
+      background: #77216f;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col overflow-hidden select-none">
+
+  <!-- Top App Navigation Bar -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between z-20 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20 text-white font-black text-xl">
+        <!-- Linux Penguin / Terminal Icon -->
+        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+          <path d="M12 2C9.5 2 7.5 4 7.5 6.5c0 1.2.5 2.3 1.3 3.1-.3.7-.5 1.5-.5 2.4 0 1.2.4 2.3 1 3.2-.8.5-1.3 1.4-1.3 2.4 0 1.7 1.3 3 3 3 .4 0 .7-.1 1-.2.3.1.6.2 1 .2s.7-.1 1-.2c.3.1.6.2 1 .2 1.7 0 3-1.3 3-3 0-1-.5-1.9-1.3-2.4.6-.9 1-2 1-3.2 0-.9-.2-1.7-.5-2.4.8-.8 1.3-1.9 1.3-3.1C16.5 4 14.5 2 12 2zm-1.5 5.5c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm3 0c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base md:text-lg text-white leading-tight">محاكي لينوكس التعليمي</h1>
+          <span class="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-xs px-2 py-0.5 rounded-full font-mono font-medium">Ubuntu 24.04 LTS</span>
+        </div>
+        <p class="text-xs text-slate-400 hidden sm:block">بيئة تدريب تفاعلية كاملة داخل المتصفح بدون تثبيت</p>
+      </div>
+    </div>
+
+    <!-- Center/Right Action Controls -->
+    <div class="flex items-center gap-2">
+      <!-- Tabs Switcher for Mobile / Small Screens -->
+      <div class="flex bg-slate-800/80 p-1 rounded-lg border border-slate-700/60 text-xs">
+        <button id="tab-terminal-btn" class="px-3 py-1.5 rounded-md font-semibold transition bg-orange-600 text-white flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>الطرفية</span>
+        </button>
+        <button id="tab-labs-btn" class="px-3 py-1.5 rounded-md font-semibold transition text-slate-300 hover:text-white flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          <span>المسارات التعليمية</span>
+          <span id="lab-progress-badge" class="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.2 rounded-full font-mono">0%</span>
+        </button>
+        <button id="tab-explorer-btn" class="px-3 py-1.5 rounded-md font-semibold transition text-slate-300 hover:text-white hidden lg:flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          <span>مستكشف الملفات</span>
+        </button>
+      </div>
+
+      <!-- Theme Selector Dropdown -->
+      <div class="relative">
+        <select id="theme-selector" class="bg-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer">
+          <option value="ubuntu">أوبونتو (Aubergine)</option>
+          <option value="matrix">الماتريكس (Matrix)</option>
+          <option value="cyberpunk">سايبربانك (Dark Cyan)</option>
+          <option value="monokai">مونوكاي (Monokai)</option>
+        </select>
+      </div>
+
+      <!-- Reset Filesystem Button -->
+      <button id="reset-fs-btn" title="إعادة تعيين بيئة النظام الافتراضية" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition border border-transparent hover:border-slate-700">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      </button>
+
+      <!-- Audio Mute Toggle -->
+      <button id="audio-toggle-btn" title="كتم / تفعيل الصوت" class="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-slate-800 rounded-lg transition border border-transparent hover:border-slate-700">
+        <svg id="audio-icon-on" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+        <svg id="audio-icon-off" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+      </button>
+
+      <!-- Cheat Sheet Help Modal Trigger -->
+      <button id="help-modal-btn" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
+        <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>دليل الأوامر</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Layout (Responsive Split Panels) -->
+  <main class="flex-1 flex overflow-hidden relative">
+
+    <!-- LEFT / MAIN: Linux Terminal Section -->
+    <section id="terminal-section" class="flex-1 flex flex-col h-full bg-[#18141f] relative overflow-hidden transition-all duration-200">
+      
+      <!-- Terminal Header / Titlebar -->
+      <div id="term-header" class="bg-[#2c001e] border-b border-[#43284c] px-4 py-2 flex items-center justify-between shrink-0 select-none">
+        <div class="flex items-center gap-2">
+          <!-- Window Controls (Ubuntu style: Close, Minimize, Maximize) -->
+          <div class="flex items-center gap-1.5 ml-2">
+            <span class="w-3 h-3 rounded-full bg-rose-500/80 hover:bg-rose-500 inline-block cursor-pointer transition" title="إغلاق"></span>
+            <span class="w-3 h-3 rounded-full bg-amber-500/80 hover:bg-amber-500 inline-block cursor-pointer transition" title="تصغير"></span>
+            <span class="w-3 h-3 rounded-full bg-emerald-500/80 hover:bg-emerald-500 inline-block cursor-pointer transition" title="تكبير"></span>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono text-slate-300 mr-2">
+            <svg class="w-3.5 h-3.5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3"/></svg>
+            <span id="term-title-text">user@linux-sandbox: ~ (bash)</span>
+          </div>
+        </div>
+
+        <!-- Terminal Status indicators -->
+        <div class="flex items-center gap-3 text-[11px] text-slate-400 font-mono">
+          <span class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Online</span>
+          </span>
+          <span id="session-time" class="hidden sm:inline">00:00</span>
+          <button id="clear-term-btn" class="hover:text-slate-200 px-1.5 py-0.5 rounded bg-slate-800/60 hover:bg-slate-700/80 text-[10px]" title="Ctrl+L">مسح (clear)</button>
+        </div>
+      </div>
+
+      <!-- Terminal Output Screen (Scrollable) -->
+      <div id="terminal-screen" dir="ltr" class="flex-1 p-4 overflow-y-auto terminal-font text-sm leading-relaxed text-slate-200 space-y-1.5 focus:outline-none cursor-text select-text">
+        <!-- Terminal Welcome Banner -->
+        <div class="text-slate-400 select-none pb-2 mb-2 border-b border-slate-800/80 text-xs">
+          <div class="text-orange-400 font-bold text-sm">Welcome to Ubuntu 24.04 LTS (GNU/Linux 6.8.0-generic x86_64)</div>
+          <div class="text-slate-400 mt-1"> * Documentation:  https://help.ubuntu.com</div>
+          <div class="text-slate-400"> * Management:     https://landscape.canonical.com</div>
+          <div class="text-slate-400"> * Support:        https://ubuntu.com/pro</div>
+          <div class="text-emerald-400 mt-1.5 font-sans font-medium text-right" dir="rtl">
+            💡 مرحباً بك في بيئة التدريب! اكتب <span class="font-mono bg-slate-800 text-amber-300 px-1.5 py-0.5 rounded text-xs">help</span> لعرض قائمة الأوامر المتاحة، أو اختر مهمة من المسارات التعليمية على اليمين.
+          </div>
+        </div>
+
+        <!-- Historical logs and outputs inserted dynamically here -->
+        <div id="terminal-history" class="space-y-1.5"></div>
+
+        <!-- Active Input Prompt Line -->
+        <div id="active-prompt-row" class="flex items-start flex-wrap gap-x-1.5 pt-1">
+          <span id="active-prompt-prefix" class="shrink-0 select-none font-bold">
+            <span class="text-emerald-400">user@linux-sandbox</span><span class="text-slate-400">:</span><span class="text-sky-400">~</span><span class="text-slate-200">$</span>
+          </span>
+          <div class="flex-1 min-w-[140px] relative inline-flex items-center">
+            <input type="text" id="terminal-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" 
+              class="w-full bg-transparent border-0 outline-none text-slate-100 p-0 m-0 font-mono text-sm leading-relaxed focus:ring-0 focus:outline-none" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile / Quick-Action Shortcut Bar -->
+      <div class="bg-slate-900/90 border-t border-slate-800/80 px-2 py-1.5 flex items-center gap-1.5 overflow-x-auto shrink-0 select-none text-xs font-mono" dir="ltr">
+        <span class="text-[10px] text-slate-500 uppercase px-1 font-sans shrink-0">أوامر سريعة:</span>
+        <button class="quick-cmd-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shrink-0" data-cmd="ls -la">ls -la</button>
+        <button class="quick-cmd-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shrink-0" data-cmd="pwd">pwd</button>
+        <button class="quick-cmd-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shrink-0" data-cmd="cd ..">cd ..</button>
+        <button class="quick-cmd-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shrink-0" data-cmd="tree">tree</button>
+        <button class="quick-cmd-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shrink-0" data-cmd="neofetch">neofetch</button>
+        <button class="quick-cmd-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shrink-0" data-cmd="htop">htop</button>
+        <button class="quick-cmd-btn px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition shrink-0" data-cmd="history">history</button>
+        <div class="h-4 w-px bg-slate-700 mx-1 shrink-0"></div>
+        <button id="key-tab" class="px-2.5 py-1 rounded bg-orange-600/30 text-orange-300 hover:bg-orange-600/50 transition shrink-0 font-bold" title="إكمال تلقائي (Tab)">Tab ⇥</button>
+        <button id="key-ctrl-c" class="px-2.5 py-1 rounded bg-rose-900/40 text-rose-300 hover:bg-rose-900/60 transition shrink-0 font-bold" title="إلغاء الأمر الحالي">Ctrl+C</button>
+        <button id="key-arrow-up" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition shrink-0" title="الأمر السابق">↑</button>
+        <button id="key-arrow-down" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition shrink-0" title="الأمر التالي">↓</button>
+      </div>
+
+      <!-- Integrated Interactive Nano Editor Modal (Hidden by default) -->
+      <div id="nano-editor" class="hidden absolute inset-0 z-30 bg-[#18141f] flex flex-col font-mono text-sm">
+        <!-- Nano Title Bar -->
+        <div class="bg-[#2c001e] text-slate-200 px-4 py-1.5 flex items-center justify-between border-b border-[#43284c] text-xs">
+          <span class="font-bold text-amber-400">GNU nano 7.2</span>
+          <span id="nano-filename" class="font-bold text-white">File: new_file.txt</span>
+          <span id="nano-status" class="text-slate-400 text-[11px]">محرر نصوص مباشر</span>
+        </div>
+        <!-- Nano Textarea -->
+        <div class="flex-1 p-3 bg-[#110c11] flex flex-col">
+          <textarea id="nano-textarea" spellcheck="false" class="flex-1 w-full bg-transparent border-0 outline-none text-slate-100 font-mono text-sm resize-none leading-relaxed p-0 focus:ring-0 focus:outline-none" placeholder="اكتب أو عدل النص هنا..."></textarea>
+        </div>
+        <!-- Nano Controls / Shortcuts Bar -->
+        <div class="bg-[#2c001e] border-t border-[#43284c] px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-2">
+            <button id="nano-save-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded font-sans font-semibold transition flex items-center gap-1">
+              <span>^O</span>
+              <span>حفظ الملف (Save)</span>
+            </button>
+            <button id="nano-exit-btn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1 rounded font-sans font-semibold transition flex items-center gap-1">
+              <span>^X</span>
+              <span>خروج (Exit)</span>
+            </button>
+          </div>
+          <div class="text-[11px] text-slate-400 font-sans hidden sm:block">
+            اضغط على "حفظ" لحفظ التغييرات في النظام الوهمي ثم "خروج" للعودة إلى الطرفية
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT: Training Labs & Visual Explorer Sidebar (Toggleable or split) -->
+    <aside id="sidebar-section" class="w-full lg:w-96 xl:w-[420px] bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 overflow-hidden hidden lg:flex">
+      
+      <!-- Sidebar Header / Tabs -->
+      <div class="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 shrink-0">
+        <div class="flex items-center gap-1 bg-slate-800 p-1 rounded-lg text-xs w-full">
+          <button id="side-tab-labs" class="flex-1 py-1.5 px-2 rounded-md font-bold transition bg-orange-600 text-white text-center">المسارات والمهام</button>
+          <button id="side-tab-files" class="flex-1 py-1.5 px-2 rounded-md font-bold transition text-slate-400 hover:text-white text-center">شجرة الملفات</button>
+          <button id="side-tab-notes" class="flex-1 py-1.5 px-2 rounded-md font-bold transition text-slate-400 hover:text-white text-center">سجل الأوامر</button>
+        </div>
+      </div>
+
+      <!-- SIDEBAR TAB 1: Labs & Challenges -->
+      <div id="side-content-labs" class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- Track Selection Dropdown -->
+        <div class="p-3 bg-slate-800/40 border-b border-slate-800 flex items-center justify-between">
+          <label for="track-select" class="text-xs text-slate-400 font-medium">المسار التعليمي:</label>
+          <select id="track-select" class="bg-slate-800 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer max-w-[220px]">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <!-- Track Progress Overview Card -->
+        <div class="p-3.5 bg-gradient-to-br from-slate-800/60 to-slate-800/20 border-b border-slate-800 shrink-0">
+          <div class="flex items-center justify-between mb-1.5">
+            <span id="track-title" class="font-bold text-sm text-white">المسار 1: الأساسيات والتنقل</span>
+            <span id="track-step-count" class="text-xs text-orange-400 font-mono font-bold">1/4</span>
+          </div>
+          <p id="track-desc" class="text-xs text-slate-400 mb-2.5 leading-relaxed">تعلم كيفية التنقل بين المجلدات واستكشاف بنية نظام لينوكس.</p>
+          <div class="w-full bg-slate-700/60 h-2 rounded-full overflow-hidden">
+            <div id="track-progress-bar" class="bg-gradient-to-r from-orange-500 to-amber-400 h-full w-[25%] transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <!-- Active Task Details Box -->
+        <div class="p-4 flex-1 overflow-y-auto space-y-4">
+          <div id="current-task-card" class="bg-slate-800/70 border border-slate-700/80 rounded-xl p-4 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="inline-flex items-center gap-1.5 bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[11px] font-bold px-2 py-0.5 rounded-md">
+                <span id="task-badge-number">المهمة 1</span>
+              </span>
+              <span id="task-status-indicator" class="text-xs text-amber-400 font-medium flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                <span>قيد التنفيذ</span>
+              </span>
+            </div>
+
+            <h3 id="task-headline" class="font-bold text-base text-white mb-1.5">عرض مسار المجلد الحالي</h3>
+            <p id="task-instructions" class="text-xs text-slate-300 leading-relaxed mb-3">
+              استخدم الأمر <code class="bg-slate-900 text-amber-300 px-1 py-0.5 rounded font-mono text-[11px]">pwd</code> لمعرفة المسار الكامل للمجلد الذي تتواجد فيه الآن.
+            </p>
+
+            <!-- Hint Box (Toggleable) -->
+            <div id="task-hint-box" class="hidden bg-slate-900/80 border border-slate-700/60 rounded-lg p-2.5 text-xs text-slate-300 mb-3 space-y-1">
+              <div class="flex items-center gap-1 text-amber-400 font-bold text-[11px]">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>تلميح الحل:</span>
+              </div>
+              <p id="task-hint-text" class="text-slate-400 leading-normal font-mono text-emerald-400 text-left" dir="ltr">pwd</p>
+            </div>
+
+            <!-- Task Action Buttons -->
+            <div class="flex items-center gap-2 pt-1">
+              <button id="toggle-hint-btn" class="flex-1 bg-slate-700/70 hover:bg-slate-700 text-slate-200 text-xs py-2 px-3 rounded-lg font-medium transition flex items-center justify-center gap-1">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                <span>إظهار التلميح</span>
+              </button>
+              <button id="auto-type-btn" class="bg-orange-600/20 hover:bg-orange-600/40 text-orange-300 border border-orange-500/30 text-xs py-2 px-3 rounded-lg font-medium transition flex items-center justify-center gap-1" title="كتابة الأمر في الطرفية تلقائياً">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                <span>كتابة بالطرفية</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- List of all tasks in the track -->
+          <div class="space-y-2">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">مهام هذا المسار:</div>
+            <div id="track-task-list" class="space-y-1.5">
+              <!-- Task items rendered here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Toast Notification inside Sidebar -->
+        <div id="lab-success-toast" class="hidden p-3 bg-emerald-900/90 border-t border-emerald-700/80 text-emerald-100 flex items-center justify-between text-xs animate-bounce">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🎉</span>
+            <div>
+              <div class="font-bold text-white">أحسنت! إجابة صحيحة</div>
+              <div class="text-[11px] text-emerald-200">تم إنجاز المهمة بنجاح، الانتقال للمهمة التالية...</div>
+            </div>
+          </div>
+          <button id="next-task-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg shadow">التالي</button>
+        </div>
+      </div>
+
+      <!-- SIDEBAR TAB 2: Visual File Tree Explorer -->
+      <div id="side-content-files" class="hidden flex-1 flex flex-col overflow-hidden">
+        <div class="p-3 bg-slate-800/40 border-b border-slate-800 flex items-center justify-between">
+          <div class="text-xs text-slate-300 font-bold flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+            <span>شجرة نظام الملفات (VFS)</span>
+          </div>
+          <button id="refresh-tree-btn" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700 text-xs" title="تحديث العرض">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          </button>
+        </div>
+        <div class="p-3 text-[11px] text-slate-400 border-b border-slate-800/60 bg-slate-950/40">
+          تتحدث هذه الشجرة فورياً عند تنفيذ أوامر إنشاء أو حذف الملفات مثل <code class="text-amber-300 font-mono">touch</code> أو <code class="text-amber-300 font-mono">mkdir</code> أو <code class="text-amber-300 font-mono">rm</code>.
+        </div>
+        <div id="file-tree-container" class="flex-1 p-3 overflow-y-auto font-mono text-xs space-y-1 select-none" dir="ltr">
+          <!-- Tree nodes rendered dynamically -->
+        </div>
+        <!-- File Preview Panel -->
+        <div id="file-preview-card" class="p-3 bg-slate-950 border-t border-slate-800 text-xs hidden">
+          <div class="flex items-center justify-between mb-1.5">
+            <span id="preview-filename" class="font-bold text-sky-300 font-mono">file.txt</span>
+            <span id="preview-meta" class="text-[10px] text-slate-500 font-mono">-rw-r--r-- 48B</span>
+          </div>
+          <pre id="preview-content" class="bg-slate-900 p-2 rounded text-slate-300 font-mono text-[11px] max-h-24 overflow-y-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+
+      <!-- SIDEBAR TAB 3: Command History & Logs -->
+      <div id="side-content-notes" class="hidden flex-1 flex flex-col overflow-hidden">
+        <div class="p-3 bg-slate-800/40 border-b border-slate-800 flex items-center justify-between">
+          <span class="text-xs text-slate-300 font-bold">سجل الأوامر المنفذة في هذه الجلسة</span>
+          <button id="clear-history-log-btn" class="text-xs text-rose-400 hover:text-rose-300">مسح السجل</button>
+        </div>
+        <div id="session-history-list" class="flex-1 p-3 overflow-y-auto space-y-1 font-mono text-xs" dir="ltr">
+          <!-- Session commands list -->
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+
+  <!-- Reset Confirmation In-Page Modal -->
+  <div id="reset-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-sm w-full p-5 text-center shadow-2xl">
+      <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      </div>
+      <h3 class="font-bold text-white text-base mb-1">إعادة تعيين بيئة النظام؟</h3>
+      <p class="text-xs text-slate-400 mb-5 leading-relaxed">سيتم مسح جميع التعديلات والملفات المخصصة واستعادة شجرة نظام لينوكس الافتراضية.</p>
+      <div class="flex items-center gap-2">
+        <button id="cancel-reset-btn" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">إلغاء</button>
+        <button id="confirm-reset-btn" class="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition">تأكيد الإعادة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Congratulations In-Page Modal -->
+  <div id="congrats-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-amber-500/30 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl relative">
+      <div class="text-5xl mb-3">🐧 🏅</div>
+      <h3 class="font-bold text-xl text-white mb-2">تهانينا الحارة! مستخدم لينوكس محترف</h3>
+      <p class="text-xs text-slate-300 mb-4 leading-relaxed">لقد أتممت بنجاح جميع مسارات التدريب واكتسبت المهارات الأساسية للتعامل مع بيئة موجه الأوامر في لينوكس.</p>
+      <div class="bg-slate-800/80 rounded-xl p-3 mb-5 border border-slate-700/60 text-xs font-mono text-emerald-400">
+        Certified: Linux Bash Essentials ✓
+      </div>
+      <button id="close-congrats-btn" class="bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-bold py-2 px-6 rounded-xl text-xs transition shadow-lg">
+        متابعة التدريب الحر
+      </button>
+    </div>
+  </div>
+
+  <!-- Cheat Sheet Modal (دليل الأوامر السريع) -->
+  <div id="help-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+        <div class="flex items-center gap-2">
+          <span class="p-2 bg-orange-500/20 text-orange-400 rounded-xl">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          </span>
+          <div>
+            <h2 class="font-bold text-base text-white">دليل أوامر لينوكس الأساسية</h2>
+            <p class="text-xs text-slate-400">مرجع سريع لجميع الأوامر المدعومة في هذا المحاكي</p>
+          </div>
+        </div>
+        <button id="close-modal-btn" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Categorized Commands) -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+        
+        <!-- Category 1: Navigation -->
+        <div>
+          <h4 class="font-bold text-orange-400 mb-2 flex items-center gap-1.5 text-sm">
+            <span>📁 أوامر التنقل واستعراض المجلدات (Navigation & Listing)</span>
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">pwd</div>
+              <div class="text-slate-300">عرض مسار مجلد العمل الحالي (Print Working Directory).</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">ls -la</div>
+              <div class="text-slate-300">استعراض كافة الملفات والمجلدات بما فيها المخفية مع الصلاحيات والأحجام.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">cd [directory]</div>
+              <div class="text-slate-300">تغيير المجلد الحالي (مثل <code class="text-amber-300 font-mono">cd ..</code> أو <code class="text-amber-300 font-mono">cd ~</code>).</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">tree</div>
+              <div class="text-slate-300">عرض هيكل المجلدات والملفات على شكل شجرة متفرعة.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 2: File Operations -->
+        <div>
+          <h4 class="font-bold text-sky-400 mb-2 flex items-center gap-1.5 text-sm">
+            <span>📄 إدارة وصناعة الملفات (Files & Directories)</span>
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">mkdir -p [dir]</div>
+              <div class="text-slate-300">إنشاء مجلد جديد أو مسار مجلدات متداخلة.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">touch [filename]</div>
+              <div class="text-slate-300">إنشاء ملف فارغ جديد أو تحديث وقت تعديله.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">cat / head / tail [file]</div>
+              <div class="text-slate-300">قراءة محتوى الملف كاملاً، أو أول 10 أسطر، أو آخر أسطر.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">cp / mv / rm [-r]</div>
+              <div class="text-slate-300">نسخ، نقل/إعادة تسمية، وحذف الملفات والمجلدات.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">nano [file]</div>
+              <div class="text-slate-300">فتح محرر النصوص التفاعلي لتعديل الملف وحفظه.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">chmod [+x | 755] [file]</div>
+              <div class="text-slate-300">تغيير صلاحيات القراءة، الكتابة، والتنفيذ للملف.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 3: Redirection & Pipes -->
+        <div>
+          <h4 class="font-bold text-amber-400 mb-2 flex items-center gap-1.5 text-sm">
+            <span>⚡ الأنابيب وإعادة التوجيه (Pipes & Redirection)</span>
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">command > file</div>
+              <div class="text-slate-300">توجيه مخرجات الأمر وحفظها في ملف (استبدال المحتوى).</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">command >> file</div>
+              <div class="text-slate-300">إلحاق مخرجات الأمر بنهاية الملف دون حذف ما قبله.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">cmd1 | grep "text"</div>
+              <div class="text-slate-300">تمرير مخرجات الأمر الأول كمدخلات لأمر الفلترة grep.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">cmd | wc -l</div>
+              <div class="text-slate-300">حساب عدد الأسطر الناتجة من مخرجات الأمر.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category 4: System & Administration -->
+        <div>
+          <h4 class="font-bold text-emerald-400 mb-2 flex items-center gap-1.5 text-sm">
+            <span>⚙️ معلومات النظام والإدارة (System & Admin)</span>
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">uname -a / hostname</div>
+              <div class="text-slate-300">معلومات النواة، المعمارية، واسم الجهاز المضيف.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">df -h / free -m</div>
+              <div class="text-slate-300">مراقبة سعة القرص الصلب واستهلاك الذاكرة العشوائية RAM.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">ps aux / top / htop</div>
+              <div class="text-slate-300">عرض العمليات والبرامج النشطة في الخلفية واستخدام المعالج.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">sudo apt install [pkg]</div>
+              <div class="text-slate-300">محاكاة مدير الحزم لتثبيت برامج مثل nginx, git, python3.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">neofetch</div>
+              <div class="text-slate-300">عرض شعار لينوكس الأيقوني مع بطاقة شاملة لمواصفات النظام.</div>
+            </div>
+            <div class="bg-slate-800/60 p-2.5 rounded-lg border border-slate-700/60">
+              <div class="font-mono text-emerald-400 font-bold text-left mb-1" dir="ltr">ping / ifconfig / curl</div>
+              <div class="text-slate-300">أدوات فحص الاتصال بالشبكة وعناوين IP وطلبات الويب.</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 bg-slate-900 border-t border-slate-800 flex justify-end">
+        <button id="modal-ok-btn" class="bg-orange-600 hover:bg-orange-500 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition">
+          حسناً، فهمت
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audio Context & Tone Generator Script (Vanilla Web Audio API) -->
+  <script>
+    const AudioManager = {
+      enabled: true,
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+          } catch(e) {
+            console.warn('Web Audio not supported');
+          }
+        }
+      },
+      playKeyClick() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(450 + Math.random() * 50, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.015, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.04);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.04);
+        } catch(e){}
+      },
+      playSuccess() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523.25, now); // C5
+          osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+          osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+          osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.45);
+        } catch(e){}
+      },
+      playError() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx || this.ctx.state !== 'running') return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(160, now);
+          osc.frequency.setValueAtTime(120, now + 0.1);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } catch(e){}
+      }
+    };
+  </script>
+
+  <!-- Linux Virtual File System (VFS) Engine -->
+  <script>
+    class VirtualFileSystem {
+      constructor() {
+        this.root = this.createDefaultFS();
+      }
+
+      createDefaultFS() {
+        const now = new Date();
+        return {
+          type: 'dir',
+          name: '/',
+          permissions: 'drwxr-xr-x',
+          owner: 'root',
+          group: 'root',
+          mtime: now,
+          children: {
+            'home': {
+              type: 'dir',
+              name: 'home',
+              permissions: 'drwxr-xr-x',
+              owner: 'root',
+              group: 'root',
+              mtime: now,
+              children: {
+                'user': {
+                  type: 'dir',
+                  name: 'user',
+                  permissions: 'drwxr-xr-x',
+                  owner: 'user',
+                  group: 'user',
+                  mtime: now,
+                  children: {
+                    'documents': {
+                      type: 'dir',
+                      name: 'documents',
+                      permissions: 'drwxr-xr-x',
+                      owner: 'user',
+                      group: 'user',
+                      mtime: now,
+                      children: {
+                        'welcome.txt': {
+                          type: 'file',
+                          name: 'welcome.txt',
+                          permissions: '-rw-r--r--',
+                          owner: 'user',
+                          group: 'user',
+                          mtime: now,
+                          content: "مرحباً بك في محاكي لينوكس التعليمي!\nهذا النظام يعمل بالكامل داخل متصفحك وبدون الحاجة لتثبيت أي برامج.\nيمكنك تجربة أوامر bash الحقيقية والتدرب بحرية.\n\nWelcome to Linux Simulator!\nEnjoy learning Linux commands hands-on."
+                        },
+                        'cheatsheet.txt': {
+                          type: 'file',
+                          name: 'cheatsheet.txt',
+                          permissions: '-rw-r--r--',
+                          owner: 'user',
+                          group: 'user',
+                          mtime: now,
+                          content: "Useful Linux Commands:\n- ls: list directory contents\n- cd: change directory\n- pwd: print working directory\n- cat: concatenate and display files\n- nano: text editor\n- chmod: change permissions\n- grep: search pattern in files"
+                        }
+                      }
+                    },
+                    'scripts': {
+                      type: 'dir',
+                      name: 'scripts',
+                      permissions: 'drwxr-xr-x',
+                      owner: 'user',
+                      group: 'user',
+                      mtime: now,
+                      children: {
+                        'backup.sh': {
+                          type: 'file',
+                          name: 'backup.sh',
+                          permissions: '-rw-r--r--', // initially not executable to train chmod +x!
+                          owner: 'user',
+                          group: 'user',
+                          mtime: now,
+                          content: "#!/bin/bash\n# Automated backup script\necho 'Starting backup simulation...'\necho 'Archiving /home/user/documents to /tmp/backup.tar.gz'\necho 'Backup completed successfully!'\n"
+                        },
+                        'hello.py': {
+                          type: 'file',
+                          name: 'hello.py',
+                          permissions: '-rw-r--r--',
+                          owner: 'user',
+                          group: 'user',
+                          mtime: now,
+                          content: "print('مرحباً بك في بايثون داخل لينوكس!')\nprint('Hello from simulated Python 3.12 environment!')\n"
+                        }
+                      }
+                    },
+                    'downloads': {
+                      type: 'dir',
+                      name: 'downloads',
+                      permissions: 'drwxr-xr-x',
+                      owner: 'user',
+                      group: 'user',
+                      mtime: now,
+                      children: {}
+                    },
+                    '.bashrc': {
+                      type: 'file',
+                      name: '.bashrc',
+                      permissions: '-rw-r--r--',
+                      owner: 'user',
+                      group: 'user',
+                      mtime: now,
+                      content: "# ~/.bashrc: executed by bash for non-login shells.\nexport PS1='\\[\\033[01;32m\\]\\u@\\h\\[\\033[00m\\]:\\[\\033[01;34m\\]\\w\\[\\033[00m\\]\\$ '\nalias ll='ls -alF'\nalias la='ls -A'\nalias l='ls -CF'\n"
+                    },
+                    '.profile': {
+                      type: 'file',
+                      name: '.profile',
+                      permissions: '-rw-r--r--',
+                      owner: 'user',
+                      group: 'user',
+                      mtime: now,
+                      content: "# ~/.profile: executed by Bourne-compatible login shells.\nPATH=\"$HOME/bin:$HOME/.local/bin:$PATH\"\n"
+                    }
+                  }
+                }
+              }
+            },
+            'etc': {
+              type: 'dir',
+              name: 'etc',
+              permissions: 'drwxr-xr-x',
+              owner: 'root',
+              group: 'root',
+              mtime: now,
+              children: {
+                'os-release': {
+                  type: 'file',
+                  name: 'os-release',
+                  permissions: '-rw-r--r--',
+                  owner: 'root',
+                  group: 'root',
+                  mtime: now,
+                  content: 'NAME="Ubuntu"\nVERSION="24.04 LTS (Noble Numbat)"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME="Ubuntu 24.04 LTS"\nVERSION_ID="24.04"\nHOME_URL="https://www.ubuntu.com/"\nSUPPORT_URL="https://help.ubuntu.com/"\n'
+                },
+                'hostname': {
+                  type: 'file',
+                  name: 'hostname',
+                  permissions: '-rw-r--r--',
+                  owner: 'root',
+                  group: 'root',
+                  mtime: now,
+                  content: "linux-sandbox\n"
+                },
+                'passwd': {
+                  type: 'file',
+                  name: 'passwd',
+                  permissions: '-rw-r--r--',
+                  owner: 'root',
+                  group: 'root',
+                  mtime: now,
+                  content: "root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:Ubuntu User,,,:/home/user:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin\n"
+                }
+              }
+            },
+            'var': {
+              type: 'dir',
+              name: 'var',
+              permissions: 'drwxr-xr-x',
+              owner: 'root',
+              group: 'root',
+              mtime: now,
+              children: {
+                'log': {
+                  type: 'dir',
+                  name: 'log',
+                  permissions: 'drwxr-xr-x',
+                  owner: 'root',
+                  group: 'root',
+                  mtime: now,
+                  children: {
+                    'syslog': {
+                      type: 'file',
+                      name: 'syslog',
+                      permissions: '-rw-r-----',
+                      owner: 'root',
+                      group: 'adm',
+                      mtime: now,
+                      content: "Oct 16 10:00:01 linux-sandbox systemd[1]: Starting Daily apt download activities...\nOct 16 10:00:05 linux-sandbox systemd[1]: Finished Daily apt download activities.\nOct 16 12:15:33 linux-sandbox kernel: [    0.000000] Linux version 6.8.0-generic (buildd@canonical)\n"
+                    }
+                  }
+                }
+              }
+            },
+            'tmp': {
+              type: 'dir',
+              name: 'tmp',
+              permissions: 'drwxrwxrwt',
+              owner: 'root',
+              group: 'root',
+              mtime: now,
+              children: {}
+            },
+            'bin': {
+              type: 'dir',
+              name: 'bin',
+              permissions: 'drwxr-xr-x',
+              owner: 'root',
+              group: 'root',
+              mtime: now,
+              children: {}
+            }
+          }
+        };
+      }
+
+      reset() {
+        this.root = this.createDefaultFS();
+      }
+
+      // Normalizes a path string based on current working directory
+      resolvePath(targetPath, currentDir) {
+        if (!targetPath) return currentDir;
+        let p = targetPath.trim();
+        if (p.startsWith('~')) {
+          p = '/home/user' + p.substring(1);
+        }
+        if (!p.startsWith('/')) {
+          p = (currentDir === '/' ? '' : currentDir) + '/' + p;
+        }
+
+        const segments = p.split('/').filter(Boolean);
+        const resolved = [];
+        for (const seg of segments) {
+          if (seg === '.') continue;
+          if (seg === '..') {
+            if (resolved.length > 0) resolved.pop();
+          } else {
+            resolved.push(seg);
+          }
+        }
+        return '/' + resolved.join('/');
+      }
+
+      // Traverses to the node at resolvedPath
+      getNode(resolvedPath) {
+        if (resolvedPath === '/') return this.root;
+        const parts = resolvedPath.split('/').filter(Boolean);
+        let curr = this.root;
+        for (const part of parts) {
+          if (!curr || curr.type !== 'dir' || !curr.children) return null;
+          curr = curr.children[part];
+        }
+        return curr || null;
+      }
+
+      // Gets parent directory node and target filename/dirname
+      getParentAndName(resolvedPath) {
+        if (resolvedPath === '/') return { parent: null, name: '/' };
+        const parts = resolvedPath.split('/').filter(Boolean);
+        const name = parts.pop();
+        const parentPath = '/' + parts.join('/');
+        const parent = this.getNode(parentPath);
+        return { parent, name, parentPath };
+      }
+
+      // Creates a file or overwrites/appends content
+      writeFile(resolvedPath, content, append = false, owner = 'user') {
+        const { parent, name } = this.getParentAndName(resolvedPath);
+        if (!parent || parent.type !== 'dir') {
+          return { success: false, error: 'No such file or directory' };
+        }
+
+        const existing = parent.children[name];
+        if (existing) {
+          if (existing.type === 'dir') {
+            return { success: false, error: 'Is a directory' };
+          }
+          if (append) {
+            existing.content = (existing.content || '') + content;
+          } else {
+            existing.content = content;
+          }
+          existing.mtime = new Date();
+          return { success: true, node: existing };
+        } else {
+          const newFile = {
+            type: 'file',
+            name: name,
+            permissions: '-rw-r--r--',
+            owner: owner,
+            group: owner,
+            mtime: new Date(),
+            content: content
+          };
+          parent.children[name] = newFile;
+          return { success: true, node: newFile };
+        }
+      }
+
+      // Creates a directory
+      createDir(resolvedPath, recursive = false, owner = 'user') {
+        if (resolvedPath === '/') return { success: false, error: 'Directory exists' };
+        
+        if (recursive) {
+          const parts = resolvedPath.split('/').filter(Boolean);
+          let currPath = '';
+          for (const part of parts) {
+            currPath += '/' + part;
+            const node = this.getNode(currPath);
+            if (!node) {
+              const res = this.createDir(currPath, false, owner);
+              if (!res.success) return res;
+            } else if (node.type !== 'dir') {
+              return { success: false, error: 'File exists in path' };
+            }
+          }
+          return { success: true };
+        }
+
+        const { parent, name } = this.getParentAndName(resolvedPath);
+        if (!parent || parent.type !== 'dir') {
+          return { success: false, error: 'No such file or directory' };
+        }
+        if (parent.children[name]) {
+          return { success: false, error: 'File or directory already exists' };
+        }
+
+        parent.children[name] = {
+          type: 'dir',
+          name: name,
+          permissions: 'drwxr-xr-x',
+          owner: owner,
+          group: owner,
+          mtime: new Date(),
+          children: {}
+        };
+        return { success: true };
+      }
+
+      // Removes file or directory
+      removeNode(resolvedPath, recursive = false) {
+        if (resolvedPath === '/' || resolvedPath === '/home' || resolvedPath === '/home/user') {
+          return { success: false, error: 'Cannot remove root or home directory' };
+        }
+        const { parent, name } = this.getParentAndName(resolvedPath);
+        if (!parent || !parent.children[name]) {
+          return { success: false, error: 'No such file or directory' };
+        }
+
+        const target = parent.children[name];
+        if (target.type === 'dir' && !recursive) {
+          return { success: false, error: 'Is a directory (use -r to delete recursively)' };
+        }
+
+        delete parent.children[name];
+        return { success: true };
+      }
+    }
+  </script>
+
+  <!-- Training Labs & Challenges Dataset -->
+  <script>
+    const TrainingData = {
+      tracks: [
+        {
+          id: 'nav',
+          title: 'المسار 1: الأساسيات واستكشاف المجلدات',
+          desc: 'تعلم أهم الأوامر للتحرك داخل شجرة النظام ومعرفة مكانك واستعراض الملفات.',
+          tasks: [
+            {
+              id: 'nav-1',
+              title: 'عرض مسار المجلد الحالي (pwd)',
+              instruction: 'استخدم الأمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">pwd</code> لمعرفة المسار الكامل للمجلد الذي تقف فيه الآن.',
+              hint: 'pwd',
+              solutionCmd: 'pwd',
+              validator: (state, cmd) => cmd.trim() === 'pwd'
+            },
+            {
+              id: 'nav-2',
+              title: 'استعراض محتويات المجلد بالتفصيل (ls -la)',
+              instruction: 'استعرض جميع الملفات بما فيها الملفات المخفية وصلاحياتها وتواريخها باستخدام <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">ls -la</code>.',
+              hint: 'ls -la',
+              solutionCmd: 'ls -la',
+              validator: (state, cmd) => {
+                const c = cmd.trim();
+                return c === 'ls -la' || c === 'ls -al' || c === 'ls -l -a' || c === 'ls -a -l';
+              }
+            },
+            {
+              id: 'nav-3',
+              title: 'الدخول إلى مجلد documents',
+              instruction: 'انتقل إلى مجلد المستندات باستخدام أمر تغيير المسار: <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">cd documents</code>.',
+              hint: 'cd documents',
+              solutionCmd: 'cd documents',
+              validator: (state) => state.cwd === '/home/user/documents'
+            },
+            {
+              id: 'nav-4',
+              title: 'العودة للمجلد الرئيسي (cd ~)',
+              instruction: 'ارجع مرة أخرى إلى المجلد الرئيسي للمستخدم Home Directory باستخدام <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">cd ~</code> أو <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">cd ..</code>.',
+              hint: 'cd ~',
+              solutionCmd: 'cd ~',
+              validator: (state) => state.cwd === '/home/user'
+            }
+          ]
+        },
+        {
+          id: 'files',
+          title: 'المسار 2: إدارة وصناعة الملفات',
+          desc: 'تعلم كيفية إنشاء المجلدات، وصناعة الملفات، وكتابة النصوص وقراءتها عبر الطرفية.',
+          tasks: [
+            {
+              id: 'files-1',
+              title: 'إنشاء مجلد جديد باسم lab1',
+              instruction: 'أنشئ مجلداً جديداً للتدريب باسم <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">lab1</code> باستخدام أمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">mkdir</code>.',
+              hint: 'mkdir lab1',
+              solutionCmd: 'mkdir lab1',
+              validator: (state) => {
+                const target = state.vfs.getNode('/home/user/lab1');
+                return target && target.type === 'dir';
+              }
+            },
+            {
+              id: 'files-2',
+              title: 'إنشاء ملف نصي فارغ داخل lab1',
+              instruction: 'استخدم أمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">touch</code> لإنشاء ملف باسم <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">notes.txt</code> داخل مجلد <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">lab1</code>.',
+              hint: 'touch lab1/notes.txt',
+              solutionCmd: 'touch lab1/notes.txt',
+              validator: (state) => {
+                const target = state.vfs.getNode('/home/user/lab1/notes.txt');
+                return target && target.type === 'file';
+              }
+            },
+            {
+              id: 'files-3',
+              title: 'كتابة نص في الملف عبر إعادة التوجيه (>)',
+              instruction: 'اكتب عبارة "Hello Linux" داخل الملف <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">lab1/notes.txt</code> باستخدام أمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">echo</code> وعامل التوجيه <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">></code>.',
+              hint: 'echo "Hello Linux" > lab1/notes.txt',
+              solutionCmd: 'echo "Hello Linux" > lab1/notes.txt',
+              validator: (state) => {
+                const target = state.vfs.getNode('/home/user/lab1/notes.txt');
+                return target && target.content && target.content.includes('Hello Linux');
+              }
+            },
+            {
+              id: 'files-4',
+              title: 'قراءة محتوى الملف بأمر cat',
+              instruction: 'اعرض محتويات الملف على شاشة الطرفية باستخدام أمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">cat lab1/notes.txt</code>.',
+              hint: 'cat lab1/notes.txt',
+              solutionCmd: 'cat lab1/notes.txt',
+              validator: (state, cmd) => {
+                return cmd.trim().startsWith('cat') && cmd.includes('notes.txt');
+              }
+            }
+          ]
+        },
+        {
+          id: 'perms',
+          title: 'المسار 3: الصلاحيات والسكربتات (Permissions)',
+          desc: 'فهم صلاحيات قراءة، كتابة وتنفيذ الملفات (rwx) ومنح صلاحية التشغيل للسكربتات.',
+          tasks: [
+            {
+              id: 'perms-1',
+              title: 'فحص صلاحيات سكربت backup.sh',
+              instruction: 'استعرض صلاحيات الملفات في مجلد scripts باستخدام أمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">ls -l scripts</code> ولاحظ عمود الصلاحيات.',
+              hint: 'ls -l scripts',
+              solutionCmd: 'ls -l scripts',
+              validator: (state, cmd) => {
+                return cmd.trim().includes('ls') && cmd.includes('scripts');
+              }
+            },
+            {
+              id: 'perms-2',
+              title: 'منح صلاحية التنفيذ للسكربت (chmod +x)',
+              instruction: 'الملف <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">scripts/backup.sh</code> غير قابل للتشغيل حالياً. امنحه صلاحية التنفيذ باستخدام <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">chmod +x scripts/backup.sh</code>.',
+              hint: 'chmod +x scripts/backup.sh',
+              solutionCmd: 'chmod +x scripts/backup.sh',
+              validator: (state) => {
+                const node = state.vfs.getNode('/home/user/scripts/backup.sh');
+                return node && node.permissions && node.permissions.includes('x');
+              }
+            },
+            {
+              id: 'perms-3',
+              title: 'تشغيل السكربت التنفيذي',
+              instruction: 'قم بتشغيل السكربت بعد تعديل صلاحياته بكتابة <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">./scripts/backup.sh</code>.',
+              hint: './scripts/backup.sh',
+              solutionCmd: './scripts/backup.sh',
+              validator: (state, cmd) => {
+                const c = cmd.trim();
+                return c === './scripts/backup.sh' || c === 'bash scripts/backup.sh';
+              }
+            }
+          ]
+        },
+        {
+          id: 'pipes',
+          title: 'المسار 4: معالجة النصوص والأنابيب (Pipes & Grep)',
+          desc: 'قوة لينوكس الحقيقية تكمن في ربط الأوامر ببعضها واستخراج المعلومات بدقة.',
+          tasks: [
+            {
+              id: 'pipes-1',
+              title: 'البحث عن كلمة داخل ملف باستخدام grep',
+              instruction: 'ابحث عن كلمة "Linux" داخل ملف <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">documents/welcome.txt</code> باستخدام أمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">grep -i "linux" documents/welcome.txt</code>.',
+              hint: 'grep -i "linux" documents/welcome.txt',
+              solutionCmd: 'grep -i "linux" documents/welcome.txt',
+              validator: (state, cmd) => {
+                return cmd.includes('grep') && cmd.includes('welcome.txt');
+              }
+            },
+            {
+              id: 'pipes-2',
+              title: 'ربط الأوامر بواسطة الأنبوب (Pipe |)',
+              instruction: 'اجمع بين أمر استعراض الملفات <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">ls -l /etc</code> وأمر عد الأسطر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">wc -l</code> باستخدام علامة الأنبوب <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">|</code> لمعرفة عدد العناصر.',
+              hint: 'ls -l /etc | wc -l',
+              solutionCmd: 'ls -l /etc | wc -l',
+              validator: (state, cmd) => {
+                return cmd.includes('|') && cmd.includes('wc');
+              }
+            },
+            {
+              id: 'pipes-3',
+              title: 'تخزين معلومات النواة في ملف جديد',
+              instruction: 'احفظ مواصفات النواة من أمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">uname -a</code> في ملف جديد باسم <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">sysinfo.txt</code> عبر إعادة التوجيه <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">></code>.',
+              hint: 'uname -a > sysinfo.txt',
+              solutionCmd: 'uname -a > sysinfo.txt',
+              validator: (state) => {
+                const node = state.vfs.getNode('/home/user/sysinfo.txt');
+                return node && node.content && node.content.includes('Linux');
+              }
+            }
+          ]
+        },
+        {
+          id: 'admin',
+          title: 'المسار 5: إدارة النظام والبرامج (System & Apt)',
+          desc: 'مراقبة موارد الذاكرة والمعالج ومحاكاة تثبيت الحزم بأمر apt واستعراض مواصفات النظام.',
+          tasks: [
+            {
+              id: 'admin-1',
+              title: 'فحص استهلاك الذاكرة العشوائية RAM',
+              instruction: 'استخدم الأمر <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">free -h</code> أو <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">free -m</code> لعرض الذاكرة المتاحة والمستخدمة.',
+              hint: 'free -h',
+              solutionCmd: 'free -h',
+              validator: (state, cmd) => cmd.trim().startsWith('free')
+            },
+            {
+              id: 'admin-2',
+              title: 'محاكاة تثبيت حزمة nginx عبر apt',
+              instruction: 'جرب تثبيت خادم الويب الشهير بكتابة <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">sudo apt install nginx</code> وشاهد محاكاة التثبيت.',
+              hint: 'sudo apt install nginx',
+              solutionCmd: 'sudo apt install nginx',
+              validator: (state, cmd) => {
+                return cmd.includes('apt') && cmd.includes('install');
+              }
+            },
+            {
+              id: 'admin-3',
+              title: 'استعراض مواصفات النظام بأسلوب Neofetch',
+              instruction: 'اكتب الأمر الشهير <code class="bg-slate-800 text-amber-300 px-1 py-0.5 rounded font-mono">neofetch</code> لعرض بطاقة مواصفات بيئة أوبونتو وشعار لينوكس.',
+              hint: 'neofetch',
+              solutionCmd: 'neofetch',
+              validator: (state, cmd) => cmd.trim() === 'neofetch'
+            }
+          ]
+        }
+      ]
+    };
+  </script>
+
+  <!-- Shell Interpreter, Commands, and UI Logic -->
+  <script>
+    class LinuxSimulator {
+      constructor() {
+        this.vfs = new VirtualFileSystem();
+        this.cwd = '/home/user';
+        this.user = 'user';
+        this.hostname = 'linux-sandbox';
+        this.history = [];
+        this.historyIndex = -1;
+        this.currentTrackIndex = 0;
+        this.currentTaskIndex = 0;
+        this.sessionStartTime = new Date();
+        this.installedPackages = new Set(['bash', 'coreutils', 'grep', 'nano', 'python3', 'curl', 'wget', 'neofetch', 'htop']);
+        this.environment = {
+          USER: 'user',
+          HOME: '/home/user',
+          SHELL: '/bin/bash',
+          PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+          TERM: 'xterm-256color',
+          LANG: 'en_US.UTF-8'
+        };
+
+        // Cache DOM elements
+        this.termInput = document.getElementById('terminal-input');
+        this.termHistory = document.getElementById('terminal-history');
+        this.termScreen = document.getElementById('terminal-screen');
+        this.activePromptPrefix = document.getElementById('active-prompt-prefix');
+        this.termTitleText = document.getElementById('term-title-text');
+        this.sessionTimeEl = document.getElementById('session-time');
+
+        this.initEventListeners();
+        this.initTrainingUI();
+        this.renderFileTree();
+        this.startSessionTimer();
+        this.updatePrompt();
+      }
+
+      startSessionTimer() {
+        setInterval(() => {
+          const diff = Math.floor((new Date() - this.sessionStartTime) / 1000);
+          const mins = String(Math.floor(diff / 60)).padStart(2, '0');
+          const secs = String(diff % 60).padStart(2, '0');
+          if (this.sessionTimeEl) {
+            this.sessionTimeEl.textContent = `${mins}:${secs}`;
+          }
+        }, 1000);
+      }
+
+      updatePrompt() {
+        const symbol = this.user === 'root' ? '#' : '$';
+        const displayPath = this.cwd === '/home/user' ? '~' : (this.cwd.startsWith('/home/user/') ? '~' + this.cwd.substring(10) : this.cwd);
+        const userColor = this.user === 'root' ? 'text-rose-400' : 'text-emerald-400';
+        
+        this.activePromptPrefix.innerHTML = `<span class="${userColor}">${this.user}@${this.hostname}</span><span class="text-slate-400">:</span><span class="text-sky-400">${displayPath}</span><span class="text-slate-200">${symbol}</span>`;
+        this.termTitleText.textContent = `${this.user}@${this.hostname}: ${displayPath} (bash)`;
+      }
+
+      initEventListeners() {
+        // Auto-focus terminal on click
+        this.termScreen.addEventListener('click', (e) => {
+          // If not selecting text, focus input
+          if (window.getSelection().toString().length === 0) {
+            this.termInput.focus();
+          }
+        });
+
+        // Keydown handling in terminal input
+        this.termInput.addEventListener('keydown', (e) => {
+          AudioManager.playKeyClick();
+          
+          if (e.key === 'Enter') {
+            const rawCmd = this.termInput.value;
+            this.termInput.value = '';
+            this.executeCommandLine(rawCmd);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (this.history.length > 0) {
+              if (this.historyIndex === -1) {
+                this.historyIndex = this.history.length - 1;
+              } else if (this.historyIndex > 0) {
+                this.historyIndex--;
+              }
+              this.termInput.value = this.history[this.historyIndex] || '';
+            }
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (this.historyIndex !== -1) {
+              if (this.historyIndex < this.history.length - 1) {
+                this.historyIndex++;
+                this.termInput.value = this.history[this.historyIndex];
+              } else {
+                this.historyIndex = -1;
+                this.termInput.value = '';
+              }
+            }
+          } else if (e.key === 'Tab') {
+            e.preventDefault();
+            this.handleTabCompletion();
+          } else if (e.ctrlKey && e.key === 'l') {
+            e.preventDefault();
+            this.clearScreen();
+          } else if (e.ctrlKey && e.key === 'c') {
+            e.preventDefault();
+            this.handleCancelLine();
+          }
+        });
+
+        // Quick action buttons
+        document.querySelectorAll('.quick-cmd-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const cmd = btn.getAttribute('data-cmd');
+            if (cmd) {
+              this.termInput.value = cmd;
+              this.termInput.focus();
+              this.executeCommandLine(cmd);
+            }
+          });
+        });
+
+        document.getElementById('key-tab').addEventListener('click', () => {
+          this.handleTabCompletion();
+          this.termInput.focus();
+        });
+
+        document.getElementById('key-ctrl-c').addEventListener('click', () => {
+          this.handleCancelLine();
+          this.termInput.focus();
+        });
+
+        document.getElementById('key-arrow-up').addEventListener('click', () => {
+          const e = new KeyboardEvent('keydown', { key: 'ArrowUp' });
+          this.termInput.dispatchEvent(e);
+          this.termInput.focus();
+        });
+
+        document.getElementById('key-arrow-down').addEventListener('click', () => {
+          const e = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+          this.termInput.dispatchEvent(e);
+          this.termInput.focus();
+        });
+
+        document.getElementById('clear-term-btn').addEventListener('click', () => {
+          this.clearScreen();
+        });
+
+        // Audio toggle
+        const audioBtn = document.getElementById('audio-toggle-btn');
+        const audioOnIcon = document.getElementById('audio-icon-on');
+        const audioOffIcon = document.getElementById('audio-icon-off');
+        audioBtn.addEventListener('click', () => {
+          AudioManager.enabled = !AudioManager.enabled;
+          if (AudioManager.enabled) {
+            audioOnIcon.classList.remove('hidden');
+            audioOffIcon.classList.add('hidden');
+          } else {
+            audioOnIcon.classList.add('hidden');
+            audioOffIcon.classList.remove('hidden');
+          }
+        });
+
+        // Reset FS Modal & Button
+        const resetModal = document.getElementById('reset-modal');
+        const confirmResetBtn = document.getElementById('confirm-reset-btn');
+        const cancelResetBtn = document.getElementById('cancel-reset-btn');
+
+        document.getElementById('reset-fs-btn').addEventListener('click', () => {
+          resetModal.classList.remove('hidden');
+        });
+
+        cancelResetBtn.addEventListener('click', () => {
+          resetModal.classList.add('hidden');
+        });
+
+        confirmResetBtn.addEventListener('click', () => {
+          resetModal.classList.add('hidden');
+          this.vfs.reset();
+          this.cwd = '/home/user';
+          this.user = 'user';
+          this.updatePrompt();
+          this.renderFileTree();
+          this.appendOutput('<span class="text-amber-400">System files and directories have been reset to factory defaults.</span>');
+          AudioManager.playSuccess();
+        });
+
+        // Theme selector
+        document.getElementById('theme-selector').addEventListener('change', (e) => {
+          const theme = e.target.value;
+          const termSection = document.getElementById('terminal-section');
+          const termHeader = document.getElementById('term-header');
+          
+          if (theme === 'ubuntu') {
+            termSection.style.backgroundColor = '#18141f';
+            termHeader.style.backgroundColor = '#2c001e';
+            termHeader.style.borderColor = '#43284c';
+          } else if (theme === 'matrix') {
+            termSection.style.backgroundColor = '#050d06';
+            termHeader.style.backgroundColor = '#041d08';
+            termHeader.style.borderColor = '#0c3814';
+          } else if (theme === 'cyberpunk') {
+            termSection.style.backgroundColor = '#0b0f19';
+            termHeader.style.backgroundColor = '#111827';
+            termHeader.style.borderColor = '#1f2937';
+          } else if (theme === 'monokai') {
+            termSection.style.backgroundColor = '#272822';
+            termHeader.style.backgroundColor = '#1e1f1c';
+            termHeader.style.borderColor = '#383a33';
+          }
+        });
+
+        // Mobile / Small Screen View Switcher Buttons
+        const tabTermBtn = document.getElementById('tab-terminal-btn');
+        const tabLabsBtn = document.getElementById('tab-labs-btn');
+        const tabExplorerBtn = document.getElementById('tab-explorer-btn');
+        const sidebar = document.getElementById('sidebar-section');
+        const termSec = document.getElementById('terminal-section');
+
+        const switchMainTab = (activeTab) => {
+          if (activeTab === 'term') {
+            tabTermBtn.className = 'px-3 py-1.5 rounded-md font-semibold transition bg-orange-600 text-white flex items-center gap-1.5';
+            tabLabsBtn.className = 'px-3 py-1.5 rounded-md font-semibold transition text-slate-300 hover:text-white flex items-center gap-1.5';
+            if (tabExplorerBtn) tabExplorerBtn.className = 'px-3 py-1.5 rounded-md font-semibold transition text-slate-300 hover:text-white hidden lg:flex items-center gap-1.5';
+            termSec.classList.remove('hidden');
+            // on mobile, hide sidebar
+            if (window.innerWidth < 1024) {
+              sidebar.classList.add('hidden');
+            }
+          } else if (activeTab === 'labs') {
+            tabTermBtn.className = 'px-3 py-1.5 rounded-md font-semibold transition text-slate-300 hover:text-white flex items-center gap-1.5';
+            tabLabsBtn.className = 'px-3 py-1.5 rounded-md font-semibold transition bg-orange-600 text-white flex items-center gap-1.5';
+            sidebar.classList.remove('hidden');
+            this.switchSidebarTab('labs');
+            if (window.innerWidth < 1024) {
+              termSec.classList.add('hidden');
+            }
+          } else if (activeTab === 'explorer') {
+            sidebar.classList.remove('hidden');
+            this.switchSidebarTab('files');
+          }
+        };
+
+        tabTermBtn.addEventListener('click', () => switchMainTab('term'));
+        tabLabsBtn.addEventListener('click', () => switchMainTab('labs'));
+        if (tabExplorerBtn) tabExplorerBtn.addEventListener('click', () => switchMainTab('explorer'));
+
+        // Sidebar internal tabs
+        document.getElementById('side-tab-labs').addEventListener('click', () => this.switchSidebarTab('labs'));
+        document.getElementById('side-tab-files').addEventListener('click', () => this.switchSidebarTab('files'));
+        document.getElementById('side-tab-notes').addEventListener('click', () => this.switchSidebarTab('notes'));
+
+        // Refresh tree button
+        document.getElementById('refresh-tree-btn').addEventListener('click', () => {
+          this.renderFileTree();
+        });
+
+        // Clear history button in sidebar
+        document.getElementById('clear-history-log-btn').addEventListener('click', () => {
+          document.getElementById('session-history-list').innerHTML = '<div class="text-slate-500 text-[11px]">السجل فارغ حالياً</div>';
+        });
+
+        // Help Modal toggle
+        const helpModal = document.getElementById('help-modal');
+        document.getElementById('help-modal-btn').addEventListener('click', () => {
+          helpModal.classList.remove('hidden');
+        });
+        document.getElementById('close-modal-btn').addEventListener('click', () => {
+          helpModal.classList.add('hidden');
+        });
+        document.getElementById('modal-ok-btn').addEventListener('click', () => {
+          helpModal.classList.add('hidden');
+        });
+        document.getElementById('close-congrats-btn').addEventListener('click', () => {
+          document.getElementById('congrats-modal').classList.add('hidden');
+        });
+
+
+        // Nano Editor Handlers
+        this.initNanoEditor();
+      }
+
+      switchSidebarTab(tab) {
+        const btnLabs = document.getElementById('side-tab-labs');
+        const btnFiles = document.getElementById('side-tab-files');
+        const btnNotes = document.getElementById('side-tab-notes');
+        const contentLabs = document.getElementById('side-content-labs');
+        const contentFiles = document.getElementById('side-content-files');
+        const contentNotes = document.getElementById('side-content-notes');
+
+        // Reset classes
+        [btnLabs, btnFiles, btnNotes].forEach(b => {
+          b.className = 'flex-1 py-1.5 px-2 rounded-md font-bold transition text-slate-400 hover:text-white text-center';
+        });
+        contentLabs.classList.add('hidden');
+        contentFiles.classList.add('hidden');
+        contentNotes.classList.add('hidden');
+
+        if (tab === 'labs') {
+          btnLabs.className = 'flex-1 py-1.5 px-2 rounded-md font-bold transition bg-orange-600 text-white text-center';
+          contentLabs.classList.remove('hidden');
+        } else if (tab === 'files') {
+          btnFiles.className = 'flex-1 py-1.5 px-2 rounded-md font-bold transition bg-orange-600 text-white text-center';
+          contentFiles.classList.remove('hidden');
+          this.renderFileTree();
+        } else if (tab === 'notes') {
+          btnNotes.className = 'flex-1 py-1.5 px-2 rounded-md font-bold transition bg-orange-600 text-white text-center';
+          contentNotes.classList.remove('hidden');
+        }
+      }
+
+      handleCancelLine() {
+        const displayPath = this.cwd === '/home/user' ? '~' : this.cwd;
+        const line = document.createElement('div');
+        line.className = 'space-y-0.5';
+        line.innerHTML = `<div><span class="text-emerald-400">${this.user}@${this.hostname}</span>:<span class="text-sky-400">${displayPath}</span>$ ${this.escapeHtml(this.termInput.value)}^C</div>`;
+        this.termHistory.appendChild(line);
+        this.termInput.value = '';
+        this.scrollToBottom();
+      }
+
+      clearScreen() {
+        this.termHistory.innerHTML = '';
+        this.scrollToBottom();
+      }
+
+      scrollToBottom() {
+        setTimeout(() => {
+          this.termScreen.scrollTop = this.termScreen.scrollHeight;
+        }, 10);
+      }
+
+      escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      handleTabCompletion() {
+        const inputVal = this.termInput.value;
+        if (!inputVal) return;
+
+        const parts = inputVal.split(' ');
+        const lastPart = parts[parts.length - 1];
+
+        // If completing first token, complete command names
+        if (parts.length === 1) {
+          const availableCommands = [
+            'ls', 'cd', 'pwd', 'mkdir', 'touch', 'rm', 'cp', 'mv', 'cat', 'head', 'tail',
+            'echo', 'grep', 'find', 'chmod', 'chown', 'tree', 'nano', 'python3', 'bash',
+            'sudo', 'su', 'apt', 'apt-get', 'uname', 'whoami', 'id', 'hostname', 'date',
+            'uptime', 'df', 'free', 'ps', 'top', 'htop', 'kill', 'ping', 'curl', 'wget',
+            'ifconfig', 'ip', 'neofetch', 'clear', 'history', 'help', 'exit'
+          ];
+          const matches = availableCommands.filter(c => c.startsWith(lastPart));
+          if (matches.length === 1) {
+            this.termInput.value = matches[0] + ' ';
+          } else if (matches.length > 1) {
+            this.appendOutput(`<div class="text-slate-400 font-mono text-xs">${matches.join('  ')}</div>`);
+          }
+          return;
+        }
+
+        // Otherwise complete file / folder paths
+        const lastSlashIndex = lastPart.lastIndexOf('/');
+        let searchDir = this.cwd;
+        let prefix = '';
+        let targetPrefix = lastPart;
+
+        if (lastSlashIndex !== -1) {
+          prefix = lastPart.substring(0, lastSlashIndex + 1);
+          targetPrefix = lastPart.substring(lastSlashIndex + 1);
+          searchDir = this.vfs.resolvePath(prefix, this.cwd);
+        }
+
+        const dirNode = this.vfs.getNode(searchDir);
+        if (dirNode && dirNode.type === 'dir' && dirNode.children) {
+          const names = Object.keys(dirNode.children);
+          const matches = names.filter(n => n.startsWith(targetPrefix));
+          if (matches.length === 1) {
+            const item = dirNode.children[matches[0]];
+            const suffix = item.type === 'dir' ? '/' : ' ';
+            parts[parts.length - 1] = prefix + matches[0] + suffix;
+            this.termInput.value = parts.join(' ');
+          } else if (matches.length > 1) {
+            this.appendOutput(`<div class="text-slate-400 font-mono text-xs">${matches.join('  ')}</div>`);
+          }
+        }
+      }
+
+      appendOutput(htmlContent) {
+        const item = document.createElement('div');
+        item.className = 'text-slate-200 leading-relaxed';
+        item.innerHTML = htmlContent;
+        this.termHistory.appendChild(item);
+        this.scrollToBottom();
+      }
+
+      executeCommandLine(rawCmd) {
+        const cmdTrimmed = rawCmd.trim();
+        if (!cmdTrimmed) return;
+
+        // Record history
+        this.history.push(cmdTrimmed);
+        this.historyIndex = -1;
+        this.addHistoryToSidebar(cmdTrimmed);
+
+        // Render prompt echo in terminal history
+        const displayPath = this.cwd === '/home/user' ? '~' : (this.cwd.startsWith('/home/user/') ? '~' + this.cwd.substring(10) : this.cwd);
+        const userColor = this.user === 'root' ? 'text-rose-400' : 'text-emerald-400';
+        const symbol = this.user === 'root' ? '#' : '$';
+
+        const echoRow = document.createElement('div');
+        echoRow.className = 'font-bold';
+        echoRow.innerHTML = `<span class="${userColor}">${this.user}@${this.hostname}</span>:<span class="text-sky-400">${displayPath}</span>${symbol} <span class="text-slate-100 font-normal">${this.escapeHtml(rawCmd)}</span>`;
+        this.termHistory.appendChild(echoRow);
+
+        // Process Command Pipeline or Redirection
+        this.processPipesAndRedirection(cmdTrimmed);
+
+        // Verify training challenges after command execution
+        this.checkTaskCompletion(cmdTrimmed);
+
+        // Update file tree in sidebar
+        this.renderFileTree();
+        this.scrollToBottom();
+      }
+
+      addHistoryToSidebar(cmd) {
+        const list = document.getElementById('session-history-list');
+        const emptyMsg = list.querySelector('.text-slate-500');
+        if (emptyMsg) emptyMsg.remove();
+
+        const item = document.createElement('div');
+        item.className = 'p-1.5 bg-slate-800/60 rounded hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between cursor-pointer group transition';
+        item.innerHTML = `
+          <span class="truncate">${this.escapeHtml(cmd)}</span>
+          <span class="text-[10px] text-orange-400 opacity-0 group-hover:opacity-100 font-sans">تشغيل</span>
+        `;
+        item.addEventListener('click', () => {
+          this.termInput.value = cmd;
+          this.termInput.focus();
+        });
+        list.appendChild(item);
+        list.scrollTop = list.scrollHeight;
+      }
+
+      processPipesAndRedirection(fullCmd) {
+        // Check for redirection: > or >>
+        let redirectOp = null;
+        let redirectFile = null;
+        let execCmd = fullCmd;
+
+        if (fullCmd.includes('>>')) {
+          const parts = fullCmd.split('>>');
+          execCmd = parts[0].trim();
+          redirectOp = '>>';
+          redirectFile = parts[1].trim();
+        } else if (fullCmd.includes('>')) {
+          const parts = fullCmd.split('>');
+          execCmd = parts[0].trim();
+          redirectOp = '>';
+          redirectFile = parts[1].trim();
+        }
+
+        // Check for pipes |
+        const pipeSegments = execCmd.split('|').map(s => s.trim()).filter(Boolean);
+
+        let previousOutput = '';
+        for (let i = 0; i < pipeSegments.length; i++) {
+          const seg = pipeSegments[i];
+          const result = this.runSingleCommand(seg, previousOutput);
+          if (result.error) {
+            this.appendOutput(`<span class="text-rose-400">${this.escapeHtml(result.error)}</span>`);
+            return;
+          }
+          previousOutput = result.output || '';
+        }
+
+        // Handle redirection if specified
+        if (redirectOp && redirectFile) {
+          const resolvedPath = this.vfs.resolvePath(redirectFile, this.cwd);
+          const isAppend = redirectOp === '>>';
+          const writeRes = this.vfs.writeFile(resolvedPath, previousOutput + (previousOutput.endsWith('\n') ? '' : '\n'), isAppend, this.user);
+          if (!writeRes.success) {
+            this.appendOutput(`<span class="text-rose-400">bash: ${this.escapeHtml(redirectFile)}: ${writeRes.error}</span>`);
+          }
+          return;
+        }
+
+        // Otherwise output to terminal
+        if (previousOutput) {
+          this.appendOutput(previousOutput);
+        }
+      }
+
+      // Executes a single command string with optional pipe input
+      runSingleCommand(cmdStr, pipeInput = '') {
+        // Parse arguments with quotes support
+        const tokens = [];
+        let cur = '';
+        let inQuotes = false;
+        let quoteChar = '';
+
+        for (let i = 0; i < cmdStr.length; i++) {
+          const char = cmdStr[i];
+          if ((char === '"' || char === "'") && (!inQuotes || quoteChar === char)) {
+            inQuotes = !inQuotes;
+            quoteChar = inQuotes ? char : '';
+          } else if (char === ' ' && !inQuotes) {
+            if (cur) {
+              tokens.push(cur);
+              cur = '';
+            }
+          } else {
+            cur += char;
+          }
+        }
+        if (cur) tokens.push(cur);
+
+        if (tokens.length === 0) return { output: '' };
+
+        const baseCmd = tokens[0];
+        const args = tokens.slice(1);
+
+        // Command dispatcher
+        switch (baseCmd) {
+          case 'pwd':
+            return { output: this.cwd };
+
+          case 'cd':
+            return this.cmdCd(args);
+
+          case 'ls':
+            return this.cmdLs(args);
+
+          case 'cat':
+            return this.cmdCat(args, pipeInput);
+
+          case 'touch':
+            return this.cmdTouch(args);
+
+          case 'mkdir':
+            return this.cmdMkdir(args);
+
+          case 'rm':
+            return this.cmdRm(args);
+
+          case 'cp':
+            return this.cmdCp(args);
+
+          case 'mv':
+            return this.cmdMv(args);
+
+          case 'echo':
+            return this.cmdEcho(args);
+
+          case 'grep':
+            return this.cmdGrep(args, pipeInput);
+
+          case 'wc':
+            return this.cmdWc(args, pipeInput);
+
+          case 'head':
+            return this.cmdHead(args, pipeInput);
+
+          case 'tail':
+            return this.cmdTail(args, pipeInput);
+
+          case 'tree':
+            return this.cmdTree(args);
+
+          case 'chmod':
+            return this.cmdChmod(args);
+
+          case 'chown':
+            return this.cmdChown(args);
+
+          case 'uname':
+            return this.cmdUname(args);
+
+          case 'whoami':
+            return { output: this.user };
+
+          case 'id':
+            return { output: `uid=1000(${this.user}) gid=1000(${this.user}) groups=1000(${this.user}),4(adm),27(sudo)` };
+
+          case 'hostname':
+            return { output: this.hostname };
+
+          case 'date':
+            return { output: new Date().toUTCString() };
+
+          case 'uptime':
+            return { output: ' 12:45:00 up 4 days, 3:22,  1 user,  load average: 0.12, 0.08, 0.05' };
+
+          case 'free':
+            return this.cmdFree(args);
+
+          case 'df':
+            return this.cmdDf(args);
+
+          case 'ps':
+            return this.cmdPs(args);
+
+          case 'top':
+          case 'htop':
+            return this.cmdHtop();
+
+          case 'sudo':
+            if (args.length === 0) return { error: 'usage: sudo command' };
+            if (args[0] === 'su' || (args[0] === '-i')) {
+              this.user = 'root';
+              this.updatePrompt();
+              return { output: '<span class="text-amber-400">Switched to root superuser. Be careful with administrative rights!</span>' };
+            }
+            return this.runSingleCommand(args.join(' '), pipeInput);
+
+          case 'su':
+            this.user = (args[0] && args[0] !== 'root') ? args[0] : 'root';
+            this.updatePrompt();
+            return { output: `<span class="text-amber-400">Switched user to ${this.user}</span>` };
+
+          case 'exit':
+            if (this.user !== 'user') {
+              this.user = 'user';
+              this.updatePrompt();
+              return { output: 'exit\n<span class="text-slate-400">Returned to unprivileged user session.</span>' };
+            }
+            return { output: 'Logout not available in browser sandbox session.' };
+
+          case 'apt':
+          case 'apt-get':
+            return this.cmdApt(args);
+
+          case 'ping':
+            return this.cmdPing(args);
+
+          case 'curl':
+          case 'wget':
+            return this.cmdCurl(args);
+
+          case 'ifconfig':
+          case 'ip':
+            return this.cmdIfconfig(args);
+
+          case 'neofetch':
+          case 'screenfetch':
+            return this.cmdNeofetch();
+
+          case 'nano':
+            this.openNano(args[0] || 'untitled.txt');
+            return { output: '' };
+
+          case 'python':
+          case 'python3':
+            return this.cmdPython(args);
+
+          case 'bash':
+          case 'sh':
+            if (args[0]) {
+              return this.executeScriptFile(args[0]);
+            }
+            return { output: 'GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu)' };
+
+          case 'history':
+            return this.cmdHistory();
+
+          case 'clear':
+            this.clearScreen();
+            return { output: '' };
+
+          case 'help':
+            return this.cmdHelp();
+
+          default:
+            // Check if executing a script like ./backup.sh
+            if (baseCmd.startsWith('./') || baseCmd.startsWith('/')) {
+              return this.executeScriptFile(baseCmd);
+            }
+            return { error: `bash: ${baseCmd}: command not found` };
+        }
+      }
+
+      // Command Implementations
+      cmdCd(args) {
+        const target = args[0] || '~';
+        const resolved = this.vfs.resolvePath(target, this.cwd);
+        const node = this.vfs.getNode(resolved);
+        if (!node) {
+          return { error: `bash: cd: ${target}: No such file or directory` };
+        }
+        if (node.type !== 'dir') {
+          return { error: `bash: cd: ${target}: Not a directory` };
+        }
+        this.cwd = resolved;
+        this.updatePrompt();
+        return { output: '' };
+      }
+
+      cmdLs(args) {
+        let showAll = false;
+        let showLong = false;
+        let targetDir = this.cwd;
+
+        for (const arg of args) {
+          if (arg.startsWith('-')) {
+            if (arg.includes('a')) showAll = true;
+            if (arg.includes('l')) showLong = true;
+          } else {
+            targetDir = this.vfs.resolvePath(arg, this.cwd);
+          }
+        }
+
+        const node = this.vfs.getNode(targetDir);
+        if (!node) {
+          return { error: `ls: cannot access '${targetDir}': No such file or directory` };
+        }
+
+        if (node.type === 'file') {
+          return { output: node.name };
+        }
+
+        const entries = Object.values(node.children || {});
+        let filtered = entries;
+        if (!showAll) {
+          filtered = entries.filter(e => !e.name.startsWith('.'));
+        }
+
+        if (showLong) {
+          const lines = [`total ${filtered.length * 4}`];
+          filtered.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+            const size = item.type === 'dir' ? 4096 : (item.content ? item.content.length : 0);
+            const dateStr = 'Oct 16 12:00';
+            const colorClass = item.type === 'dir' ? 'text-sky-400 font-bold' : (item.permissions.includes('x') ? 'text-emerald-400 font-bold' : 'text-slate-200');
+            lines.push(`${item.permissions} 1 ${item.owner} ${item.group} ${String(size).padStart(6, ' ')} ${dateStr} <span class="${colorClass}">${item.name}${item.type === 'dir' ? '/' : ''}</span>`);
+          });
+          return { output: lines.join('<br>') };
+        } else {
+          const formatted = filtered.map(item => {
+            const colorClass = item.type === 'dir' ? 'text-sky-400 font-bold' : (item.permissions.includes('x') ? 'text-emerald-400 font-bold' : 'text-slate-200');
+            return `<span class="${colorClass}">${item.name}${item.type === 'dir' ? '/' : ''}</span>`;
+          });
+          return { output: formatted.join('&nbsp;&nbsp;&nbsp;&nbsp;') };
+        }
+      }
+
+      cmdCat(args, pipeInput) {
+        if (args.length === 0) {
+          return { output: pipeInput || '' };
+        }
+
+        const outputs = [];
+        for (const file of args) {
+          const resolved = this.vfs.resolvePath(file, this.cwd);
+          const node = this.vfs.getNode(resolved);
+          if (!node) {
+            return { error: `cat: ${file}: No such file or directory` };
+          }
+          if (node.type === 'dir') {
+            return { error: `cat: ${file}: Is a directory` };
+          }
+          outputs.push(this.escapeHtml(node.content || '').replace(/\n/g, '<br>'));
+        }
+        return { output: outputs.join('<br>') };
+      }
+
+      cmdTouch(args) {
+        if (args.length === 0) return { error: 'touch: missing file operand' };
+        for (const file of args) {
+          const resolved = this.vfs.resolvePath(file, this.cwd);
+          const res = this.vfs.writeFile(resolved, '', false, this.user);
+          if (!res.success) {
+            return { error: `touch: cannot touch '${file}': ${res.error}` };
+          }
+        }
+        return { output: '' };
+      }
+
+      cmdMkdir(args) {
+        let recursive = false;
+        const targets = [];
+        for (const arg of args) {
+          if (arg === '-p') recursive = true;
+          else targets.push(arg);
+        }
+        if (targets.length === 0) return { error: 'mkdir: missing operand' };
+
+        for (const t of targets) {
+          const resolved = this.vfs.resolvePath(t, this.cwd);
+          const res = this.vfs.createDir(resolved, recursive, this.user);
+          if (!res.success) {
+            return { error: `mkdir: cannot create directory '${t}': ${res.error}` };
+          }
+        }
+        return { output: '' };
+      }
+
+      cmdRm(args) {
+        let recursive = false;
+        const targets = [];
+        for (const arg of args) {
+          if (arg === '-r' || arg === '-rf' || arg === '-fr') recursive = true;
+          else if (!arg.startsWith('-')) targets.push(arg);
+        }
+        if (targets.length === 0) return { error: 'rm: missing operand' };
+
+        for (const t of targets) {
+          const resolved = this.vfs.resolvePath(t, this.cwd);
+          const res = this.vfs.removeNode(resolved, recursive);
+          if (!res.success) {
+            return { error: `rm: cannot remove '${t}': ${res.error}` };
+          }
+        }
+        return { output: '' };
+      }
+
+      cmdCp(args) {
+        if (args.length < 2) return { error: 'cp: missing destination file operand' };
+        const src = this.vfs.resolvePath(args[0], this.cwd);
+        const dst = this.vfs.resolvePath(args[1], this.cwd);
+        const srcNode = this.vfs.getNode(src);
+        if (!srcNode) return { error: `cp: cannot stat '${args[0]}': No such file or directory` };
+
+        if (srcNode.type === 'file') {
+          this.vfs.writeFile(dst, srcNode.content, false, this.user);
+          return { output: '' };
+        }
+        return { error: 'cp: -r not specified for directory' };
+      }
+
+      cmdMv(args) {
+        if (args.length < 2) return { error: 'mv: missing destination file operand' };
+        const src = this.vfs.resolvePath(args[0], this.cwd);
+        const dst = this.vfs.resolvePath(args[1], this.cwd);
+        const srcNode = this.vfs.getNode(src);
+        if (!srcNode) return { error: `mv: cannot stat '${args[0]}': No such file or directory` };
+
+        // Copy then remove
+        if (srcNode.type === 'file') {
+          this.vfs.writeFile(dst, srcNode.content, false, this.user);
+          this.vfs.removeNode(src, false);
+          return { output: '' };
+        }
+        return { error: 'mv: directory move not supported in simple sandbox' };
+      }
+
+      cmdEcho(args) {
+        let text = args.join(' ');
+        // Expand environment variables
+        text = text.replace(/\$([A-Z_]+)/g, (_, varName) => {
+          return this.environment[varName] || (varName === 'USER' ? this.user : '');
+        });
+        return { output: text };
+      }
+
+      cmdGrep(args, pipeInput) {
+        let ignoreCase = false;
+        let lineNumbers = false;
+        const remaining = [];
+        for (const a of args) {
+          if (a.startsWith('-')) {
+            if (a.includes('i')) ignoreCase = true;
+            if (a.includes('n')) lineNumbers = true;
+          } else {
+            remaining.push(a);
+          }
+        }
+
+        if (remaining.length === 0) return { error: 'grep: search pattern missing' };
+        const pattern = remaining[0];
+        let content = pipeInput;
+
+        if (remaining.length > 1) {
+          const resolved = this.vfs.resolvePath(remaining[1], this.cwd);
+          const node = this.vfs.getNode(resolved);
+          if (!node) return { error: `grep: ${remaining[1]}: No such file or directory` };
+          if (node.type === 'dir') return { error: `grep: ${remaining[1]}: Is a directory` };
+          content = node.content || '';
+        }
+
+        const lines = (content || '').split('\n');
+        const matches = [];
+        const regex = new RegExp(pattern, ignoreCase ? 'i' : '');
+
+        lines.forEach((line, idx) => {
+          if (regex.test(line)) {
+            const numPrefix = lineNumbers ? `<span class="text-emerald-400">${idx + 1}:</span>` : '';
+            const highlighted = line.replace(regex, m => `<span class="bg-rose-900/60 text-rose-300 font-bold px-0.5 rounded">${m}</span>`);
+            matches.push(`${numPrefix}${highlighted}`);
+          }
+        });
+
+        return { output: matches.join('<br>') };
+      }
+
+      cmdWc(args, pipeInput) {
+        let countLines = false;
+        let countWords = false;
+        let countBytes = false;
+        const files = [];
+
+        for (const a of args) {
+          if (a.startsWith('-')) {
+            if (a.includes('l')) countLines = true;
+            if (a.includes('w')) countWords = true;
+            if (a.includes('c')) countBytes = true;
+          } else {
+            files.push(a);
+          }
+        }
+
+        if (!countLines && !countWords && !countBytes) {
+          countLines = true; countWords = true; countBytes = true;
+        }
+
+        let content = pipeInput;
+        let filename = '';
+        if (files.length > 0) {
+          filename = files[0];
+          const resolved = this.vfs.resolvePath(filename, this.cwd);
+          const node = this.vfs.getNode(resolved);
+          if (!node) return { error: `wc: ${filename}: No such file or directory` };
+          content = node.content || '';
+        }
+
+        const lines = content ? content.split('\n').length : 0;
+        const words = content ? content.trim().split(/\s+/).filter(Boolean).length : 0;
+        const bytes = content ? content.length : 0;
+
+        const res = [];
+        if (countLines) res.push(lines);
+        if (countWords) res.push(words);
+        if (countBytes) res.push(bytes);
+        if (filename) res.push(filename);
+
+        return { output: res.join('&nbsp;&nbsp;&nbsp;&nbsp;') };
+      }
+
+      cmdHead(args, pipeInput) {
+        const count = 10;
+        let content = pipeInput;
+        if (args.length > 0) {
+          const resolved = this.vfs.resolvePath(args[0], this.cwd);
+          const node = this.vfs.getNode(resolved);
+          if (!node) return { error: `head: cannot open '${args[0]}'` };
+          content = node.content || '';
+        }
+        const lines = (content || '').split('\n').slice(0, count);
+        return { output: lines.join('<br>') };
+      }
+
+      cmdTail(args, pipeInput) {
+        const count = 10;
+        let content = pipeInput;
+        if (args.length > 0) {
+          const resolved = this.vfs.resolvePath(args[0], this.cwd);
+          const node = this.vfs.getNode(resolved);
+          if (!node) return { error: `tail: cannot open '${args[0]}'` };
+          content = node.content || '';
+        }
+        const allLines = (content || '').split('\n');
+        const lines = allLines.slice(Math.max(0, allLines.length - count));
+        return { output: lines.join('<br>') };
+      }
+
+      cmdTree(args) {
+        const target = args[0] ? this.vfs.resolvePath(args[0], this.cwd) : this.cwd;
+        const node = this.vfs.getNode(target);
+        if (!node) return { error: `tree: ${target}: No such file or directory` };
+
+        const lines = [`<span class="text-sky-400 font-bold">${node.name}</span>`];
+        let dirCount = 0;
+        let fileCount = 0;
+
+        const walk = (currNode, prefix) => {
+          if (!currNode.children) return;
+          const keys = Object.keys(currNode.children).filter(k => !k.startsWith('.'));
+          keys.forEach((key, idx) => {
+            const isLast = idx === keys.length - 1;
+            const child = currNode.children[key];
+            const connector = isLast ? '└── ' : '├── ';
+            const childPrefix = isLast ? '    ' : '│   ';
+
+            if (child.type === 'dir') {
+              dirCount++;
+              lines.push(`${prefix}${connector}<span class="text-sky-400 font-bold">${child.name}/</span>`);
+              walk(child, prefix + childPrefix);
+            } else {
+              fileCount++;
+              const color = child.permissions.includes('x') ? 'text-emerald-400 font-bold' : 'text-slate-300';
+              lines.push(`${prefix}${connector}<span class="${color}">${child.name}</span>`);
+            }
+          });
+        };
+
+        walk(node, '');
+        lines.push(`<br><span class="text-slate-400">${dirCount} directories, ${fileCount} files</span>`);
+        return { output: lines.join('<br>') };
+      }
+
+      cmdChmod(args) {
+        if (args.length < 2) return { error: 'chmod: missing operand' };
+        const mode = args[0];
+        const file = args[1];
+        const resolved = this.vfs.resolvePath(file, this.cwd);
+        const node = this.vfs.getNode(resolved);
+        if (!node) return { error: `chmod: cannot access '${file}': No such file or directory` };
+
+        if (mode === '+x' || mode === '755' || mode === '777') {
+          node.permissions = node.type === 'dir' ? 'drwxr-xr-x' : '-rwxr-xr-x';
+        } else if (mode === '-x' || mode === '644') {
+          node.permissions = node.type === 'dir' ? 'drw-r--r--' : '-rw-r--r--';
+        }
+        return { output: '' };
+      }
+
+      cmdChown(args) {
+        if (args.length < 2) return { error: 'chown: missing operand' };
+        const newOwner = args[0];
+        const file = args[1];
+        const resolved = this.vfs.resolvePath(file, this.cwd);
+        const node = this.vfs.getNode(resolved);
+        if (!node) return { error: `chown: cannot access '${file}': No such file or directory` };
+        node.owner = newOwner;
+        return { output: '' };
+      }
+
+      cmdUname(args) {
+        if (args.includes('-a')) {
+          return { output: 'Linux linux-sandbox 6.8.0-generic #42-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct 16 12:00:00 UTC 2026 x86_64 x86_64 x86_64 GNU/Linux' };
+        }
+        if (args.includes('-r')) {
+          return { output: '6.8.0-generic' };
+        }
+        return { output: 'Linux' };
+      }
+
+      cmdFree(args) {
+        return {
+          output: `
+               total        used        free      shared  buff/cache   available
+Mem:           8192        1840        4820          45        1532        6020
+Swap:          2048           0        2048
+          `.trim().replace(/\n/g, '<br>').replace(/ /g, '&nbsp;')
+        };
+      }
+
+      cmdDf(args) {
+        return {
+          output: `
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root        50G   14G   34G  30% /
+tmpfs           4.0G     0  4.0G   0% /dev/shm
+/dev/vda1       512M  6.1M  506M   2% /boot/efi
+          `.trim().replace(/\n/g, '<br>').replace(/ /g, '&nbsp;')
+        };
+      }
+
+      cmdPs(args) {
+        return {
+          output: `
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.1 169324 13420 ?        Ss   10:00   0:02 /sbin/init
+root         240  0.0  0.2  89400 18200 ?        Ss   10:00   0:01 /lib/systemd/systemd-journald
+user        1042  0.0  0.1  14200  4800 pts/0    Ss   12:00   0:00 bash
+user        2180  0.0  0.0  10400  3100 pts/0    R+   12:45   0:00 ps aux
+          `.trim().replace(/\n/g, '<br>').replace(/ /g, '&nbsp;')
+        };
+      }
+
+      cmdHtop() {
+        return {
+          output: `
+<span class="text-sky-400">  [||||||||||||||||                      24.8%]</span>   Tasks: 42 total, 1 running
+<span class="text-emerald-400">  Mem[|||||||||||||                 1.84G/8.00G]</span>   Uptime: 4 days, 3:22:15
+<span class="text-orange-400">  Swp[                                 0K/2.04G]</span>   Load average: 0.12 0.08 0.05
+<br>
+<span class="bg-slate-800 text-slate-300 font-bold px-1">  PID USER      PRI  NI  VIRT   RES   SHR S CPU% MEM%   TIME+  Command </span>
+  1042 user       20   0 14.2M 4800K 3100K S  0.5  0.1  0:00.28 bash
+     1 root       20   0  169M 13.4M 8900K S  0.0  0.2  0:02.14 /sbin/init
+   240 root       20   0 89.4M 18.2M 11.2M S  0.0  0.2  0:01.05 systemd-journald
+          `.trim()
+        };
+      }
+
+      cmdApt(args) {
+        if (args.length === 0) {
+          return { output: 'apt 2.8.0 (x86_64)<br>Usage: apt [command] [package]' };
+        }
+        const action = args[0];
+        if (action === 'update') {
+          return {
+            output: `
+Hit:1 http://archive.ubuntu.com/ubuntu noble InRelease<br>
+Hit:2 http://archive.ubuntu.com/ubuntu noble-updates InRelease<br>
+Hit:3 http://security.ubuntu.com/ubuntu noble-security InRelease<br>
+<span class="text-emerald-400 font-bold">Reading package lists... Done</span><br>
+Building dependency tree... Done<br>
+All packages are up to date.
+            `.trim()
+          };
+        } else if (action === 'install') {
+          const pkg = args[1] || 'sample-pkg';
+          this.installedPackages.add(pkg);
+          return {
+            output: `
+Reading package lists... Done<br>
+Building dependency tree... Done<br>
+The following NEW packages will be installed: <strong>${this.escapeHtml(pkg)}</strong><br>
+0 upgraded, 1 newly installed, 0 to remove.<br>
+Need to get 1,420 kB of archives.<br>
+<span class="text-sky-400">Get:1 http://archive.ubuntu.com/ubuntu noble/main ${this.escapeHtml(pkg)} [1,420 kB]</span><br>
+Setting up ${this.escapeHtml(pkg)} ...<br>
+<span class="text-emerald-400 font-bold">Package ${this.escapeHtml(pkg)} installed successfully!</span>
+            `.trim()
+          };
+        }
+        return { output: `apt: unsupported action '${action}'` };
+      }
+
+      cmdPing(args) {
+        const host = args[0] || 'google.com';
+        return {
+          output: `
+PING ${this.escapeHtml(host)} (142.250.185.78) 56(84) bytes of data.<br>
+64 bytes from fra24s08-in-f14.1e100.net (142.250.185.78): icmp_seq=1 ttl=118 time=14.2 ms<br>
+64 bytes from fra24s08-in-f14.1e100.net (142.250.185.78): icmp_seq=2 ttl=118 time=13.8 ms<br>
+64 bytes from fra24s08-in-f14.1e100.net (142.250.185.78): icmp_seq=3 ttl=118 time=14.5 ms<br>
+--- ${this.escapeHtml(host)} ping statistics ---<br>
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms<br>
+rtt min/avg/max/mdev = 13.812/14.170/14.502/0.282 ms
+          `.trim()
+        };
+      }
+
+      cmdCurl(args) {
+        const url = args[0] || 'https://api.ipify.org';
+        return {
+          output: `
+<span class="text-slate-400">HTTP/1.1 200 OK</span><br>
+<span class="text-slate-400">Content-Type: text/plain</span><br>
+<span class="text-slate-400">Date: ${new Date().toUTCString()}</span><br>
+<br>
+198.51.100.42
+          `.trim()
+        };
+      }
+
+      cmdIfconfig(args) {
+        return {
+          output: `
+eth0: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inet 192.168.1.105  netmask 255.255.255.0  broadcast 192.168.1.255<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ether 52:54:00:12:34:56  txqueuelen 1000  (Ethernet)<br>
+lo: flags=73&lt;UP,LOOPBACK,RUNNING&gt;  mtu 65536<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;inet 127.0.0.1  netmask 255.0.0.0
+          `.trim()
+        };
+      }
+
+      cmdNeofetch() {
+        return {
+          output: `
+<div class="flex items-start gap-4 text-xs font-mono select-none" dir="ltr">
+  <pre class="text-orange-500 font-bold leading-tight">
+         _nnnn_
+        dGGGGMMb
+       @p~qp~~qMb
+       M|@||@) M|
+       @,----.JM|
+      JS^\__/  qKL
+     dZP        qKRb
+    dZP          qKKb
+   fZP            SMMb
+   HZM            MMMM
+   FqM            MMMM
+ __| ".        |\dS"qML
+ |    \`-.__.__.'  |  \Zq
+ |                 |   |
+  </pre>
+  <div class="space-y-0.5 leading-tight pt-1">
+    <div class="text-orange-400 font-bold"><span class="text-emerald-400">user</span>@<span class="text-sky-400">linux-sandbox</span></div>
+    <div class="text-slate-600">--------------------------</div>
+    <div><span class="text-orange-400 font-bold">OS:</span> Ubuntu 24.04 LTS x86_64</div>
+    <div><span class="text-orange-400 font-bold">Host:</span> Browser Virtual Machine (Wasm/JS VFS)</div>
+    <div><span class="text-orange-400 font-bold">Kernel:</span> 6.8.0-generic</div>
+    <div><span class="text-orange-400 font-bold">Uptime:</span> 4 days, 3 hours</div>
+    <div><span class="text-orange-400 font-bold">Packages:</span> ${this.installedPackages.size} (dpkg)</div>
+    <div><span class="text-orange-400 font-bold">Shell:</span> bash 5.2.21</div>
+    <div><span class="text-orange-400 font-bold">Terminal:</span> xterm-256color</div>
+    <div><span class="text-orange-400 font-bold">CPU:</span> Virtual 8 Cores @ 2.80GHz</div>
+    <div><span class="text-orange-400 font-bold">Memory:</span> 1840MiB / 8192MiB</div>
+    <div class="pt-2 flex gap-1">
+      <span class="w-3 h-2 bg-slate-800"></span>
+      <span class="w-3 h-2 bg-rose-500"></span>
+      <span class="w-3 h-2 bg-emerald-500"></span>
+      <span class="w-3 h-2 bg-amber-500"></span>
+      <span class="w-3 h-2 bg-sky-500"></span>
+      <span class="w-3 h-2 bg-purple-500"></span>
+      <span class="w-3 h-2 bg-teal-500"></span>
+      <span class="w-3 h-2 bg-white"></span>
+    </div>
+  </div>
+</div>
+          `.trim()
+        };
+      }
+
+      executeScriptFile(scriptPath) {
+        const resolved = this.vfs.resolvePath(scriptPath, this.cwd);
+        const node = this.vfs.getNode(resolved);
+        if (!node) return { error: `bash: ${scriptPath}: No such file or directory` };
+        if (node.type === 'dir') return { error: `bash: ${scriptPath}: Is a directory` };
+        if (!node.permissions.includes('x')) {
+          return { error: `bash: ${scriptPath}: Permission denied (use chmod +x to allow execution)` };
+        }
+
+        // Execute script lines
+        const lines = (node.content || '').split('\n');
+        const scriptOutputs = [];
+        for (const line of lines) {
+          const l = line.trim();
+          if (!l || l.startsWith('#')) continue;
+          const res = this.runSingleCommand(l);
+          if (res.output) scriptOutputs.push(res.output);
+        }
+        return { output: scriptOutputs.join('<br>') || '<span class="text-emerald-400">Script executed successfully (exit code 0).</span>' };
+      }
+
+      cmdPython(args) {
+        if (args.length === 0) {
+          return { output: 'Python 3.12.3 (main, Apr 10 2026, 12:00:00)\n[GCC 13.2.0] on linux\nType "help", "copyright", "credits" or "license" for more information.' };
+        }
+        const file = args[0];
+        const resolved = this.vfs.resolvePath(file, this.cwd);
+        const node = this.vfs.getNode(resolved);
+        if (!node) return { error: `python3: can't open file '${file}': [Errno 2] No such file or directory` };
+
+        // Simple python print evaluator
+        const prints = [];
+        const lines = (node.content || '').split('\n');
+        for (const line of lines) {
+          const m = line.match(/print\s*\((.*)\)/);
+          if (m) {
+            let val = m[1].trim();
+            if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) {
+              val = val.substring(1, val.length - 1);
+            }
+            prints.push(this.escapeHtml(val));
+          }
+        }
+        return { output: prints.join('<br>') || 'Program exited with status 0.' };
+      }
+
+      cmdHistory() {
+        const formatted = this.history.map((cmd, i) => {
+          return `&nbsp;&nbsp;${String(i + 1).padStart(4, ' ')}  ${this.escapeHtml(cmd)}`;
+        });
+        return { output: formatted.join('<br>') };
+      }
+
+      cmdHelp() {
+        return {
+          output: `
+<span class="text-orange-400 font-bold">Available Commands in Linux Web Simulator:</span><br>
+&nbsp;• <strong>Navigation:</strong> pwd, ls (-la), cd, tree<br>
+&nbsp;• <strong>File ops:</strong> mkdir (-p), touch, cat, head, tail, rm (-r), cp, mv, nano<br>
+&nbsp;• <strong>Text & Pipes:</strong> echo, grep (-i -n), wc (-l), &gt; (redirect), &gt;&gt; (append), | (pipe)<br>
+&nbsp;• <strong>Security:</strong> chmod (+x, 755), chown, sudo, su, id, whoami<br>
+&nbsp;• <strong>System info:</strong> uname (-a), hostname, date, uptime, df (-h), free (-m), ps (aux), htop, neofetch<br>
+&nbsp;• <strong>Packages & Net:</strong> apt (update/install), ping, curl, ifconfig, ip<br>
+&nbsp;• <strong>Utilities:</strong> clear, history, help, python3, bash<br>
+<br>
+<span class="text-sky-400">💡 اضغط على "دليل الأوامر" في الأعلى لعرض شرح تفصيلي بكل أمر مع أمثلة باللغة العربية!</span>
+          `.trim()
+        };
+      }
+
+      // Integrated Nano Editor
+      initNanoEditor() {
+        const nanoModal = document.getElementById('nano-editor');
+        const nanoText = document.getElementById('nano-textarea');
+        const nanoFileLabel = document.getElementById('nano-filename');
+        const nanoSaveBtn = document.getElementById('nano-save-btn');
+        const nanoExitBtn = document.getElementById('nano-exit-btn');
+        let currentEditingFile = null;
+
+        this.openNano = (fileName) => {
+          currentEditingFile = fileName;
+          nanoFileLabel.textContent = `File: ${fileName}`;
+          const resolved = this.vfs.resolvePath(fileName, this.cwd);
+          const node = this.vfs.getNode(resolved);
+          nanoText.value = node && node.type === 'file' ? (node.content || '') : '';
+          nanoModal.classList.remove('hidden');
+          nanoText.focus();
+        };
+
+        nanoSaveBtn.addEventListener('click', () => {
+          if (!currentEditingFile) return;
+          const resolved = this.vfs.resolvePath(currentEditingFile, this.cwd);
+          this.vfs.writeFile(resolved, nanoText.value, false, this.user);
+          AudioManager.playSuccess();
+          const status = document.getElementById('nano-status');
+          status.textContent = 'تم حفظ الملف بنجاح ✓';
+          setTimeout(() => { status.textContent = 'محرر نصوص مباشر'; }, 2000);
+          this.renderFileTree();
+        });
+
+        nanoExitBtn.addEventListener('click', () => {
+          nanoModal.classList.add('hidden');
+          this.termInput.focus();
+        });
+
+        nanoText.addEventListener('keydown', (e) => {
+          if (e.ctrlKey && e.key === 'o') {
+            e.preventDefault();
+            nanoSaveBtn.click();
+          } else if (e.ctrlKey && e.key === 'x') {
+            e.preventDefault();
+            nanoExitBtn.click();
+          }
+        });
+      }
+
+      // Training UI & Challenge Engine
+      initTrainingUI() {
+        const trackSelect = document.getElementById('track-select');
+        trackSelect.innerHTML = '';
+
+        TrainingData.tracks.forEach((track, idx) => {
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = track.title;
+          trackSelect.appendChild(opt);
+        });
+
+        trackSelect.addEventListener('change', (e) => {
+          this.currentTrackIndex = parseInt(e.target.value, 10);
+          this.currentTaskIndex = 0;
+          this.renderCurrentTask();
+        });
+
+        // Hint toggle button
+        const hintBtn = document.getElementById('toggle-hint-btn');
+        const hintBox = document.getElementById('task-hint-box');
+        hintBtn.addEventListener('click', () => {
+          hintBox.classList.toggle('hidden');
+          hintBtn.querySelector('span').textContent = hintBox.classList.contains('hidden') ? 'إظهار التلميح' : 'إخفاء التلميح';
+        });
+
+        // Auto-type button
+        document.getElementById('auto-type-btn').addEventListener('click', () => {
+          const track = TrainingData.tracks[this.currentTrackIndex];
+          const task = track.tasks[this.currentTaskIndex];
+          if (task && task.solutionCmd) {
+            this.termInput.value = task.solutionCmd;
+            this.termInput.focus();
+          }
+        });
+
+        // Next task button on toast
+        document.getElementById('next-task-btn').addEventListener('click', () => {
+          this.advanceToNextTask();
+        });
+
+        this.renderCurrentTask();
+      }
+
+      renderCurrentTask() {
+        const track = TrainingData.tracks[this.currentTrackIndex];
+        const task = track.tasks[this.currentTaskIndex];
+
+        document.getElementById('track-title').textContent = track.title;
+        document.getElementById('track-desc').textContent = track.desc;
+        document.getElementById('track-step-count').textContent = `${this.currentTaskIndex + 1}/${track.tasks.length}`;
+
+        const pct = Math.round(((this.currentTaskIndex) / track.tasks.length) * 100);
+        document.getElementById('track-progress-bar').style.width = `${pct}%`;
+        document.getElementById('lab-progress-badge').textContent = `${pct}%`;
+
+        document.getElementById('task-badge-number').textContent = `المهمة ${this.currentTaskIndex + 1}`;
+        document.getElementById('task-headline').textContent = task.title;
+        document.getElementById('task-instructions').innerHTML = task.instruction;
+        document.getElementById('task-hint-text').textContent = task.hint;
+        document.getElementById('task-hint-box').classList.add('hidden');
+        document.getElementById('toggle-hint-btn').querySelector('span').textContent = 'إظهار التلميح';
+
+        // Render Task list in sidebar
+        const listContainer = document.getElementById('track-task-list');
+        listContainer.innerHTML = '';
+        track.tasks.forEach((t, idx) => {
+          const isDone = idx < this.currentTaskIndex;
+          const isCurrent = idx === this.currentTaskIndex;
+          const row = document.createElement('div');
+          row.className = `p-2 rounded-lg text-xs flex items-center justify-between border ${isCurrent ? 'bg-orange-500/10 border-orange-500/40 text-white font-bold' : (isDone ? 'bg-slate-800/40 border-emerald-900/40 text-emerald-300' : 'bg-slate-800/20 border-slate-800 text-slate-500')}`;
+          row.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span>${isDone ? '✓' : (isCurrent ? '▶' : '○')}</span>
+              <span class="truncate">${t.title}</span>
+            </div>
+            <span class="text-[10px] font-mono">${isDone ? 'مكتمل' : (isCurrent ? 'الحالي' : 'مغلق')}</span>
+          `;
+          listContainer.appendChild(row);
+        });
+
+        // Hide success toast
+        document.getElementById('lab-success-toast').classList.add('hidden');
+      }
+
+      checkTaskCompletion(executedCmd) {
+        const track = TrainingData.tracks[this.currentTrackIndex];
+        const task = track.tasks[this.currentTaskIndex];
+        if (!task) return;
+
+        const isSuccess = task.validator({
+          cwd: this.cwd,
+          vfs: this.vfs,
+          user: this.user
+        }, executedCmd);
+
+        if (isSuccess) {
+          AudioManager.playSuccess();
+          const toast = document.getElementById('lab-success-toast');
+          toast.classList.remove('hidden');
+
+          // Highlight status
+          const indicator = document.getElementById('task-status-indicator');
+          indicator.innerHTML = '<span class="text-emerald-400 font-bold">✓ مكتمل بنجاح!</span>';
+
+          // Auto advance after 2 seconds or on click
+          setTimeout(() => {
+            if (!toast.classList.contains('hidden')) {
+              this.advanceToNextTask();
+            }
+          }, 2400);
+        }
+      }
+
+      advanceToNextTask() {
+        const track = TrainingData.tracks[this.currentTrackIndex];
+        if (this.currentTaskIndex < track.tasks.length - 1) {
+          this.currentTaskIndex++;
+          this.renderCurrentTask();
+        } else {
+          // Completed track!
+          if (this.currentTrackIndex < TrainingData.tracks.length - 1) {
+            this.currentTrackIndex++;
+            this.currentTaskIndex = 0;
+            document.getElementById('track-select').value = this.currentTrackIndex;
+            this.renderCurrentTask();
+          } else {
+            const congratsModal = document.getElementById('congrats-modal');
+            if (congratsModal) congratsModal.classList.remove('hidden');
+          }
+        }
+      }
+
+      // Visual File Tree Explorer
+      renderFileTree() {
+        const container = document.getElementById('file-tree-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const previewCard = document.getElementById('file-preview-card');
+        const previewName = document.getElementById('preview-filename');
+        const previewMeta = document.getElementById('preview-meta');
+        const previewContent = document.getElementById('preview-content');
+
+        const createTreeElement = (node, path) => {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'ml-3 border-l border-slate-800 pl-2 space-y-1';
+
+          if (!node.children) return wrapper;
+
+          const keys = Object.keys(node.children).sort((a, b) => {
+            const nodeA = node.children[a];
+            const nodeB = node.children[b];
+            if (nodeA.type === nodeB.type) return a.localeCompare(b);
+            return nodeA.type === 'dir' ? -1 : 1;
+          });
+
+          keys.forEach(key => {
+            const item = node.children[key];
+            const itemPath = path === '/' ? '/' + key : path + '/' + key;
+            const row = document.createElement('div');
+            row.className = 'flex items-center gap-1.5 py-0.5 px-1 rounded hover:bg-slate-800/80 cursor-pointer group transition';
+
+            if (item.type === 'dir') {
+              row.innerHTML = `
+                <svg class="w-3.5 h-3.5 text-sky-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                <span class="text-sky-300 font-bold group-hover:text-white truncate">${key}</span>
+              `;
+              row.addEventListener('click', () => {
+                this.cmdCd([itemPath]);
+                this.renderFileTree();
+              });
+              wrapper.appendChild(row);
+              wrapper.appendChild(createTreeElement(item, itemPath));
+            } else {
+              const isExec = item.permissions.includes('x');
+              row.innerHTML = `
+                <svg class="w-3.5 h-3.5 ${isExec ? 'text-emerald-400' : 'text-slate-400'} shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <span class="${isExec ? 'text-emerald-300 font-semibold' : 'text-slate-300'} group-hover:text-white truncate">${key}</span>
+                <span class="text-[9px] text-slate-500 font-mono ml-auto opacity-0 group-hover:opacity-100">${item.content ? item.content.length + 'B' : '0B'}</span>
+              `;
+              row.addEventListener('click', () => {
+                previewCard.classList.remove('hidden');
+                previewName.textContent = itemPath;
+                previewMeta.textContent = `${item.permissions} ${item.content ? item.content.length + 'B' : '0B'}`;
+                previewContent.textContent = item.content || '(ملف فارغ)';
+              });
+              wrapper.appendChild(row);
+            }
+          });
+
+          return wrapper;
+        };
+
+        const rootHeader = document.createElement('div');
+        rootHeader.className = 'font-bold text-slate-400 flex items-center gap-1.5 pb-1';
+        rootHeader.innerHTML = `
+          <svg class="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/></svg>
+          <span>/ (Root Directory)</span>
+        `;
+        container.appendChild(rootHeader);
+        container.appendChild(createTreeElement(this.vfs.root, '/'));
+      }
+    }
+
+    // Launch application on window load
+    window.addEventListener('DOMContentLoaded', () => {
+      window.linuxApp = new LinuxSimulator();
+    });
+  </script>
+</body>
+</html>
